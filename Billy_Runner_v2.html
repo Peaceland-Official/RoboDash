@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Billy Runner</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#bfe0ff;font-family:Arial,sans-serif;touch-action:none}
+canvas{display:block;width:100vw;height:100vh}
+#hud{position:fixed;left:18px;right:18px;top:18px;display:flex;justify-content:space-between;font-weight:800;font-size:22px;color:#111;pointer-events:none}
+#help{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(255,255,255,.85);padding:9px 14px;border-radius:16px;font-size:14px;white-space:nowrap}
+#over{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);align-items:center;justify-content:center}
+#box{background:#fff;padding:24px 30px;border-radius:20px;text-align:center;box-shadow:0 14px 40px rgba(0,0,0,.3)}
+button{border:0;border-radius:12px;padding:12px 18px;font-size:17px;font-weight:700}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><span id="score">Score: 0</span><span id="speed">Speed: 1.0x</span></div>
+<div id="help">← → move • ↑ / tap jump • swipe left/right</div>
+<div id="over"><div id="box"><h2>Game Over</h2><p id="final"></p><button id="restart">Run Again</button></div></div>
+
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let W=0,H=0,DPR=1;
+
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2);
+  W=innerWidth; H=innerHeight;
+  c.width=W*DPR; c.height=H*DPR;
+  c.style.width=W+'px'; c.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener('resize',resize); resize();
+
+let lane=1,targetLane=1,xLane=0;
+let y=0,vy=0,onGround=true;
+let alive=true,score=0,speed=1,time=0,spawn=1.2;
+let obstacles=[];
+const lanePos=[-1,0,1];
+
+function lerp(a,b,t){return a+(b-a)*t}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function persp(z){ return 1/(0.22+z*0.78); } // z 0 near, 1 far
+function roadX(l,z){
+  const center=W/2, near=W*.32, far=W*.055;
+  return center + l*lerp(near,far,z);
+}
+function roadY(z){
+  const horizon=H*.25, bottom=H*1.02;
+  return lerp(bottom,horizon,z);
+}
+
+function poly(points,fill,stroke){
+  ctx.beginPath(); ctx.moveTo(points[0][0],points[0][1]);
+  for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);
+  ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}
+}
+
+function drawBox(x,y,w,h,d,front,side,top){
+  // faux 3D cuboid
+  const ox=d*.34, oy=-d*.24;
+  poly([[x-w/2,y-h/2],[x+w/2,y-h/2],[x+w/2,y+h/2],[x-w/2,y+h/2]],front);
+  poly([[x+w/2,y-h/2],[x+w/2+ox,y-h/2+oy],[x+w/2+ox,y+h/2+oy],[x+w/2,y+h/2]],side);
+  poly([[x-w/2,y-h/2],[x-w/2+ox,y-h/2+oy],[x+w/2+ox,y-h/2+oy],[x+w/2,y-h/2]],top);
+}
+
+function drawBackground(){
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,H*.62);
+  g.addColorStop(0,'#b8dcff'); g.addColorStop(1,'#eaf6ff');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
+  // grass
+  ctx.fillStyle='#78bd69';
+  ctx.fillRect(0,H*.25,W,H*.75);
+
+  // road trapezoid
+  poly([[W*.11,H],[W*.89,H],[W*.56,H*.25],[W*.44,H*.25]],'#3f4349');
+
+  // road edges
+  ctx.strokeStyle='#e8e8e8';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(W*.11,H);ctx.lineTo(W*.44,H*.25);
+  ctx.moveTo(W*.89,H);ctx.lineTo(W*.56,H*.25);ctx.stroke();
+
+  // lane markers moving toward player
+  for(let i=0;i<14;i++){
+    let z=((i/14 + time*speed*.22)%1);
+    const y1=roadY(z), y2=roadY(Math.min(1,z+.045));
+    for(const l of [-.5,.5]){
+      const x1=roadX(l,z),x2=roadX(l,Math.min(1,z+.045));
+      const ww=lerp(8,1,z);
+      ctx.strokeStyle='rgba(255,255,255,.9)';
+      ctx.lineWidth=ww;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    }
+  }
+
+  // simple blocky scenery
+  for(let i=0;i<8;i++){
+    let z=((i/8 + time*.045)%1);
+    const s=lerp(1.25,.15,z), yy=roadY(z);
+    const bxL=roadX(-1.75,z), bxR=roadX(1.75,z);
+    drawBox(bxL,yy-45*s,35*s,70*s,20*s,'#b8b0a1','#8e887d','#d6d0c4');
+    drawBox(bxR,yy-38*s,30*s,60*s,18*s,'#c6b89f','#938773','#e1d4bd');
+  }
+}
+
+function drawBilly(){
+  const ground=H*.80;
+  const jumpY=y;
+  const laneW=W*.17;
+  xLane += (lanePos[targetLane]*laneW-xLane)*.18;
+  const cx=W/2+xLane;
+  const cy=ground-jumpY;
+
+  const run=Math.sin(time*13*speed);
+  const s=clamp(W/950,.72,1.25);
+
+  // shadow
+  ctx.save();
+  ctx.globalAlpha=.22;
+  ctx.fillStyle='#000';
+  ctx.beginPath();
+  ctx.ellipse(cx,ground+56*s,52*s*(1-jumpY/700),14*s,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // legs
+  drawBox(cx-21*s+run*8*s,cy+54*s,26*s,70*s,18*s,'#2d3339','#1d2227','#495159');
+  drawBox(cx+21*s-run*8*s,cy+54*s,26*s,70*s,18*s,'#2d3339','#1d2227','#495159');
+
+  // feet
+  drawBox(cx-22*s+run*8*s,cy+93*s,35*s,18*s,25*s,'#aeb8c0','#7c858c','#d8e0e6');
+  drawBox(cx+22*s-run*8*s,cy+93*s,35*s,18*s,25*s,'#aeb8c0','#7c858c','#d8e0e6');
+
+  // arms
+  const armSwing=run*18*s;
+  drawBox(cx-63*s,cy-5*s+armSwing,22*s,72*s,15*s,'#333a40','#20262b','#535d65');
+  drawBox(cx+63*s,cy-5*s-armSwing,22*s,72*s,15*s,'#333a40','#20262b','#535d65');
+
+  // hands
+  drawBox(cx-63*s,cy+34*s+armSwing,27*s,23*s,16*s,'#aeb8c0','#7c858c','#d8e0e6');
+  drawBox(cx+63*s,cy+34*s-armSwing,27*s,23*s,16*s,'#aeb8c0','#7c858c','#d8e0e6');
+
+  // torso
+  drawBox(cx,cy-14*s,92*s,92*s,30*s,'#adb7bf','#77818a','#dbe2e7');
+
+  // shoulder bar
+  drawBox(cx,cy-62*s,99*s,16*s,31*s,'#667783','#48545d','#8294a0');
+
+  // head from BACK: intentionally blank
+  drawBox(cx,cy-110*s,72*s,62*s,27*s,'#31383e','#20262b','#566169');
+
+  // little rear antenna
+  ctx.strokeStyle='#252b30';ctx.lineWidth=7*s;
+  ctx.beginPath();ctx.moveTo(cx,cy-142*s);ctx.lineTo(cx,cy-168*s);ctx.stroke();
+  ctx.fillStyle='#9faab2';ctx.beginPath();ctx.arc(cx,cy-174*s,9*s,0,Math.PI*2);ctx.fill();
+}
+
+function spawnObstacle(){
+  let lane=Math.floor(Math.random()*3);
+  obstacles.push({lane,z:1.05,h:Math.random()<.3?1.35:1});
+}
+
+function drawObstacles(dt){
+  for(let i=obstacles.length-1;i>=0;i--){
+    let o=obstacles[i];
+    o.z-=dt*(.34+.13*(speed-1));
+    if(o.z<-.08){obstacles.splice(i,1);score+=12;continue}
+    const zz=clamp(o.z,0,1), scale=lerp(1.2,.08,zz);
+    const xx=roadX(lanePos[o.lane],zz), yy=roadY(zz);
+    const ww=85*scale, hh=80*scale*o.h;
+    drawBox(xx,yy-hh/2,ww,hh,ww*.35,'#df6657','#a34238','#f08c80');
+
+    // collision when obstacle is close to Billy
+    if(o.z<.115 && o.z>-.02 && o.lane===targetLane){
+      const required=o.h>1.2?135:90;
+      if(y<required){gameOver();}
+    }
+  }
+}
+
+function gameOver(){
+  if(!alive)return;
+  alive=false;
+  document.getElementById('final').textContent='Score: '+Math.floor(score);
+  document.getElementById('over').style.display='flex';
+}
+
+function reset(){
+  lane=targetLane=1;xLane=0;y=0;vy=0;onGround=true;
+  alive=true;score=0;speed=1;time=0;spawn=.8;obstacles=[];
+  document.getElementById('over').style.display='none';
+}
+document.getElementById('restart').onclick=reset;
+
+function move(d){ if(alive) targetLane=clamp(targetLane+d,0,2); }
+function jump(){
+  if(alive&&onGround){vy=760;onGround=false;}
+}
+
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')move(-1);
+  if(e.key==='ArrowRight'||e.key==='d')move(1);
+  if(e.key==='ArrowUp'||e.key===' '||e.key==='w')jump();
+});
+
+let ts=null;
+addEventListener('touchstart',e=>{
+  const t=e.touches[0];ts={x:t.clientX,y:t.clientY};e.preventDefault();
+},{passive:false});
+addEventListener('touchend',e=>{
+  if(!ts)return;
+  const t=e.changedTouches[0],dx=t.clientX-ts.x,dy=t.clientY-ts.y;
+  if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1);
+  else if(dy<-30||Math.abs(dx)<25)jump();
+  ts=null;e.preventDefault();
+},{passive:false});
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,.035);last=now;
+  drawBackground();
+
+  if(alive){
+    time+=dt;
+    speed=Math.min(2.25,1+time*.012);
+    score+=dt*14*speed;
+    spawn-=dt;
+    if(spawn<=0){spawnObstacle();spawn=Math.max(.65,1.25-time*.004)+Math.random()*.35;}
+
+    if(!onGround){
+      y+=vy*dt;vy-=1900*dt;
+      if(y<=0){y=0;vy=0;onGround=true;}
+    }
+  }
+
+  drawObstacles(alive?dt:0);
+  drawBilly();
+
+  document.getElementById('score').textContent='Score: '+Math.floor(score);
+  document.getElementById('speed').textContent='Speed: '+speed.toFixed(1)+'x';
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
