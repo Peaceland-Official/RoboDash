@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>RoboDash</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#83d1ec;font-family:Arial,Helvetica,sans-serif;touch-action:none}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+#ui{position:fixed;inset:0;pointer-events:none;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.35)}
+#top{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start}
+#stats{text-align:center;background:rgba(255,255,255,.12);padding:8px 18px;border-radius:16px}
+#level{font-size:14px;letter-spacing:2px}
+#score{font-size:28px;font-weight:800}
+#high{font-size:14px;margin-top:4px}
+#progressWrap{width:260px;max-width:55vw;height:6px;background:rgba(255,255,255,.3);border-radius:8px;margin:8px auto 0;overflow:hidden}
+#progress{height:100%;width:0;background:#fff}
+.btn{pointer-events:auto;background:rgba(50,65,70,.6);border:2px solid #fff;color:#fff;border-radius:12px;padding:10px 16px;font-size:18px;font-weight:700}
+#gear{width:54px;height:54px;padding:0;font-size:27px}
+#pause{min-width:105px}
+#hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(20,35,40,.45);padding:8px 13px;border-radius:12px;font-size:13px;white-space:nowrap}
+
+#settingsOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:20}
+#settingsPanel{position:absolute;top:76px;left:34px;width:min(420px,78vw);background:rgba(18,30,33,.96);border:2px solid rgba(255,255,255,.65);border-radius:20px;padding:24px;color:#fff}
+#settingsHead{display:flex;justify-content:space-between;align-items:center}
+#settingsHead h2{margin:0;font-size:24px}
+#closeSettings{border:0;background:transparent;color:#fff;font-size:28px}
+.sectionTitle{font-size:14px;letter-spacing:1.5px;opacity:.75;margin:18px 0 10px}
+#characterRow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.charBtn{border:2px solid rgba(255,255,255,.35);border-radius:10px;padding:10px 4px;color:#fff;font-size:14px;background:#666}
+.charBtn.active{border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.65)}
+#billyBtn{background:#777}
+#bobBtn{background:#e39c0d}
+#lilyBtn{background:#ee6815}
+.charBtn.locked{opacity:.45}
+.settingRow{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.switch{position:relative;width:54px;height:30px}
+.switch input{display:none}
+.slider{position:absolute;inset:0;background:#555;border-radius:18px}
+.slider:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}
+.switch input:checked+.slider{background:#3f8df5}
+.switch input:checked+.slider:before{transform:translateX(24px)}
+#babyNote{text-align:center;font-size:12px;opacity:.7}
+#babyModeRow.disabled{opacity:.38;filter:grayscale(.5)}
+
+#startOverlay{display:flex;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(20,35,40,.45);z-index:40}
+#startPanel{width:min(520px,86vw);text-align:center;background:rgba(28,44,48,.95);border:2px solid #fff;border-radius:22px;padding:28px;color:#fff;box-shadow:0 18px 55px rgba(0,0,0,.35)}
+#startPanel h1{font-size:46px;margin:0 0 8px}
+#startPanel p{opacity:.88;line-height:1.45}
+.modeBtns{display:flex;gap:14px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.modeBtn{min-width:190px;padding:16px;border-radius:14px;border:2px solid #fff;color:#fff;font-size:19px;font-weight:800;background:#4e6c76}
+.modeBtn small{display:block;font-size:12px;font-weight:500;opacity:.85;margin-top:5px}
+#powerHud{position:fixed;top:112px;left:50%;transform:translateX(-50%);z-index:12;display:flex;gap:8px;pointer-events:none}
+.powerPill{display:none;padding:7px 11px;border-radius:12px;background:rgba(20,30,34,.75);color:#fff;font-weight:700;font-size:13px;border:1px solid rgba(255,255,255,.55)}
+#overlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,.3);z-index:30}
+#panel{width:min(430px,82vw);text-align:center;background:rgba(55,70,75,.92);border:2px solid #fff;border-radius:20px;padding:26px;color:#fff}
+#panel h1{font-size:42px;margin:5px}
+#panel h2{font-size:20px;margin:5px}
+#panelBtns{display:flex;justify-content:center;gap:12px;margin-top:18px}
+#retry{background:#f33}
+#resume{background:#4d8b63;display:none}
+</style>
+</head>
+<body>
+
+<div id="startOverlay">
+  <div id="startPanel">
+    <h1>ROBODASH</h1>
+    <p>Choose how you want to run.</p>
+    <div class="modeBtns">
+      <button id="endlessModeBtn" class="modeBtn">ENDLESS MODE<small>Run forever. No levels.</small></button>
+      <button id="adventureModeBtn" class="modeBtn">ADVENTURE MODE<small>Levels, obstacles and progression.</small></button>
+    </div>
+  </div>
+</div>
+
+<div id="powerHud">
+  <div id="jumpPill" class="powerPill">🟢 HIGHER JUMP <span></span></div>
+  <div id="fastPill" class="powerPill">🔵 FASTER SPEED <span></span></div>
+  <div id="slowPill" class="powerPill">⚫ SLOWER SPEED <span></span></div>
+  <div id="ghostPill" class="powerPill">👻 GHOST MODE <span></span></div>
+  <div id="invinciblePill" class="powerPill">🌟 INVINCIBLE <span></span></div>
+</div>
+
+<div id="ui">
+  <div id="top">
+    <button id="gear" class="btn">⚙</button>
+    <div id="stats">
+      <div id="level">LEVEL 1</div>
+      <div id="score">Score: 0 / 500</div>
+      <div id="progressWrap"><div id="progress"></div></div>
+      <div id="high">High Score: 0</div>
+    </div>
+    <button id="pause" class="btn">PAUSE</button>
+  </div>
+  <div id="hint">← → move • ↑ jump • ↓ crouch • swipe down to crouch</div>
+</div>
+
+<div id="settingsOverlay">
+  <div id="settingsPanel">
+    <div id="settingsHead"><h2>SETTINGS</h2><button id="closeSettings">✕</button></div>
+    <div class="sectionTitle">CHARACTER SELECT</div>
+    <div id="characterRow">
+      <button id="billyBtn" class="charBtn active">Billy</button>
+      <button id="bobBtn" class="charBtn">Bob</button>
+      <button id="lilyBtn" class="charBtn">Lily</button>
+      <button class="charBtn locked">Eree 🔒</button>
+      <button class="charBtn locked">TMS 🔒</button>
+    </div>
+    <div class="sectionTitle">GAMEPLAY</div>
+    <div class="settingRow"><span>🔊 Sound Effects</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="settingRow"><span>⚡ Power Ups</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="settingRow"><span>🔮 Energy Orbs</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="settingRow" id="babyModeRow"><span>👶 Baby Mode</span><label class="switch"><input id="babyToggle" type="checkbox"><span class="slider"></span></label></div>
+    <div id="babyNote">Baby Mode = endless running with no collision game over.</div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="panel">
+    <h2 id="statusTitle">ROBO-DASH</h2>
+    <h1 id="mainTitle">GAME OVER</h1>
+    <p id="finalScore">Score: 0</p>
+    <p id="newHigh"></p>
+    <div id="panelBtns">
+      <button id="retry" class="btn">RETRY</button>
+      <button id="resume" class="btn">RESUME</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js';
+
+/* ---------- renderer ---------- */
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x83d1ec);
+scene.fog = new THREE.Fog(0x83d1ec, 26, 95);
+
+const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 160);
+camera.position.set(0, 5, 8.7);
+camera.lookAt(0, 2.0, -12);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6d9b55, 2.7));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(8,14,7);
+sun.castShadow = true;
+scene.add(sun);
+
+/* ---------- path ---------- */
+const pathMat = new THREE.MeshStandardMaterial({color:0xa4ed62, roughness:1});
+const edgeMat = new THREE.MeshStandardMaterial({color:0x7bc849, roughness:1});
+const pathSegments = [];
+const SEG_LEN = 10, SEG_COUNT = 15;
+
+for(let i=0;i<SEG_COUNT;i++){
+  const group = new THREE.Group();
+
+  const path = new THREE.Mesh(new THREE.BoxGeometry(9.5,.35,SEG_LEN),pathMat);
+  path.position.y = -.18;
+  path.receiveShadow = true;
+  group.add(path);
+
+  for(const x of [-5.15,5.15]){
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(.8,.37,SEG_LEN),edgeMat);
+    edge.position.set(x,-.19,0);
+    edge.receiveShadow = true;
+    group.add(edge);
+  }
+
+  for(let j=0;j<10;j++){
+    const h=.25+Math.random()*.55;
+    const blade=new THREE.Mesh(
+      new THREE.BoxGeometry(.07,h,.07),
+      new THREE.MeshStandardMaterial({color:Math.random()>.5?0x79b84a:0xb6e66c,roughness:1})
+    );
+    const side=Math.random()>.5?1:-1;
+    blade.position.set(side*(4.0+Math.random()*1.4),h/2,(Math.random()-.5)*SEG_LEN);
+    blade.rotation.z=(Math.random()-.5)*.28;
+    group.add(blade);
+  }
+
+  group.position.z = -i*SEG_LEN;
+  scene.add(group);
+  pathSegments.push(group);
+}
+
+/* ---------- helpers ---------- */
+function mesh(parent,geometry,material,x,y,z){
+  const m = new THREE.Mesh(geometry,material);
+  m.position.set(x,y,z);
+  m.castShadow = true;
+  parent.add(m);
+  return m;
+}
+
+const silver = new THREE.MeshStandardMaterial({color:0xb9c1c3,metalness:.2,roughness:.55});
+const silver2 = new THREE.MeshStandardMaterial({color:0x899597,metalness:.15,roughness:.55});
+const antennaDark = new THREE.MeshStandardMaterial({color:0x2c3335,roughness:.65});
+const red = new THREE.MeshStandardMaterial({color:0xe9232c,roughness:.5});
+
+/* ---------- BILLY ---------- */
+const billy = new THREE.Group();
+billy.position.set(0,0,2.4);
+scene.add(billy);
+
+const billyTorso = mesh(billy,new THREE.BoxGeometry(1.35,1.55,.82),silver,0,2.15,0);
+mesh(billy,new THREE.BoxGeometry(1.08,.86,.8),silver,0,3.46,0);
+mesh(billy,new THREE.BoxGeometry(1.42,.18,.85),silver2,0,2.92,0);
+mesh(billy,new THREE.CylinderGeometry(.055,.055,.5,12),antennaDark,0,4.14,0);
+mesh(billy,new THREE.SphereGeometry(.18,16,12),red,0,4.45,0);
+
+const billyLA = new THREE.Group(), billyRA = new THREE.Group();
+billyLA.position.set(-.88,2.72,0);
+billyRA.position.set(.88,2.72,0);
+billy.add(billyLA,billyRA);
+
+/* Billy arms are SILVER, not black */
+mesh(billyLA,new THREE.BoxGeometry(.34,1.0,.4),silver,0,-.47,0);
+mesh(billyRA,new THREE.BoxGeometry(.34,1.0,.4),silver,0,-.47,0);
+mesh(billyLA,new THREE.BoxGeometry(.4,.33,.43),silver2,0,-1.02,0);
+mesh(billyRA,new THREE.BoxGeometry(.4,.33,.43),silver2,0,-1.02,0);
+
+const billyLL = new THREE.Group(), billyRL = new THREE.Group();
+billyLL.position.set(-.36,1.42,0);
+billyRL.position.set(.36,1.42,0);
+billy.add(billyLL,billyRL);
+
+/* Billy legs are SILVER, not black */
+mesh(billyLL,new THREE.BoxGeometry(.42,1.16,.5),silver,0,-.53,0);
+mesh(billyRL,new THREE.BoxGeometry(.42,1.16,.5),silver,0,-.53,0);
+mesh(billyLL,new THREE.BoxGeometry(.52,.31,.72),silver2,0,-1.13,-.12);
+mesh(billyRL,new THREE.BoxGeometry(.52,.31,.72),silver2,0,-1.13,-.12);
+
+/* ---------- BOB ---------- */
+const bobYellow = new THREE.MeshStandardMaterial({color:0xf1dc25,roughness:.6});
+const bobOrange = new THREE.MeshStandardMaterial({color:0xe95e13,roughness:.6});
+const bobDark = new THREE.MeshStandardMaterial({color:0x222222,roughness:.8});
+
+const bob = new THREE.Group();
+bob.position.set(0,0,2.4);
+bob.visible = false;
+scene.add(bob);
+
+const bobBody = mesh(bob,new THREE.SphereGeometry(.78,24,18),bobOrange,0,1.75,0);
+bobBody.scale.set(.88,1.25,.72);
+
+const bobHead = mesh(bob,new THREE.SphereGeometry(.83,28,20),bobYellow,0,3.05,0);
+bobHead.scale.z=.92;
+
+const bobLA=new THREE.Group(),bobRA=new THREE.Group();
+bobLA.position.set(-.78,2.15,0);
+bobRA.position.set(.78,2.15,0);
+bob.add(bobLA,bobRA);
+mesh(bobLA,new THREE.BoxGeometry(.28,.82,.34),bobYellow,0,-.32,0);
+mesh(bobRA,new THREE.BoxGeometry(.28,.82,.34),bobYellow,0,-.32,0);
+
+/* Bob's normal Robodex legs/feet:
+   two yellow oval RINGS with transparent/open centers */
+const bobLeftLeg=new THREE.Group(), bobRightLeg=new THREE.Group();
+bobLeftLeg.position.set(-.35,.92,0);
+bobRightLeg.position.set(.35,.92,0);
+bob.add(bobLeftLeg,bobRightLeg);
+
+const bobLeftFoot=mesh(
+  bobLeftLeg,
+  new THREE.TorusGeometry(.34,.12,14,28),
+  bobYellow,
+  0,-.24,.03
+);
+bobLeftFoot.scale.set(.92,1.28,.78);
+bobLeftFoot.rotation.x=Math.PI/2;
+
+const bobRightFoot=mesh(
+  bobRightLeg,
+  new THREE.TorusGeometry(.34,.12,14,28),
+  bobYellow,
+  0,-.24,.03
+);
+bobRightFoot.scale.set(.92,1.28,.78);
+bobRightFoot.rotation.x=Math.PI/2;
+
+/* ---------- LILY ---------- */
+const lilyOrange = new THREE.MeshStandardMaterial({color:0xe86714,roughness:.62});
+const lilyBrown = new THREE.MeshStandardMaterial({color:0x4a2815,roughness:.72});
+
+const lily = new THREE.Group();
+lily.position.set(0,0,2.4);
+lily.visible = false;
+scene.add(lily);
+
+const lilyBody=mesh(lily,new THREE.CylinderGeometry(.48,.72,1.75,18),lilyOrange,0,1.55,0);
+lilyBody.scale.z=.78;
+
+const lilyHair=mesh(lily,new THREE.CylinderGeometry(.52,1.08,1.55,18),lilyBrown,0,2.75,0);
+lilyHair.scale.z=.82;
+
+const lilyLA=new THREE.Group(),lilyRA=new THREE.Group();
+lilyLA.position.set(-.72,2.0,0);
+lilyRA.position.set(.72,2.0,0);
+lily.add(lilyLA,lilyRA);
+mesh(lilyLA,new THREE.BoxGeometry(.22,.92,.28),lilyOrange,0,-.36,0);
+mesh(lilyRA,new THREE.BoxGeometry(.22,.92,.28),lilyOrange,0,-.36,0);
+
+/* ---------- game state ---------- */
+const characters={Billy:billy,Bob:bob,Lily:lily};
+/* Ghost-mode eyes: two small 3D Robodex-style eye bars.
+   They sit on the FRONT of the runner but remain visible through the transparent model. */
+const ghostEyes = new THREE.Group();
+scene.add(ghostEyes);
+ghostEyes.visible = false;
+const eyeMat = new THREE.MeshStandardMaterial({color:0x111111,roughness:.5});
+const eyeL = new THREE.Mesh(new THREE.BoxGeometry(.10,.34,.08),eyeMat);
+const eyeR = eyeL.clone();
+eyeL.position.x=-.18; eyeR.position.x=.18;
+ghostEyes.add(eyeL,eyeR);
+
+function ghostEyeOffset(){
+  if(activeName==='Bob') return {y:3.12,z:-.83};
+  if(activeName==='Lily') return {y:2.95,z:-.78};
+  return {y:3.48,z:-.43};
+}
+
+function setRunnerGhost(on){
+  const runner=currentRunner();
+  runner.traverse(obj=>{
+    if(obj.isMesh){
+      if(!obj.userData.originalMaterial) obj.userData.originalMaterial=obj.material;
+      if(on){
+        const base=obj.userData.originalMaterial;
+        const ghostMat=base.clone();
+        ghostMat.transparent=true;
+        ghostMat.opacity=.18;
+        ghostMat.depthWrite=false;
+        obj.material=ghostMat;
+      }else if(obj.userData.originalMaterial){
+        obj.material=obj.userData.originalMaterial;
+      }
+    }
+  });
+  ghostEyes.visible=on;
+}
+
+let activeName='Billy';
+let gameMode=null;
+let lane=1,targetX=0;
+const lanes=[-2.5,0,2.5];
+let yVel=0,grounded=true;
+let crouching=false,crouchTimer=0;
+let running=false,gameOver=false,settingsOpen=false;
+let score=0,level=1,speed=13,spawnTimer=.9,powerSpawnTimer=7.0,goldenSpawnTimer=28+Math.random()*22,xpSpawnTimer=.8,fistSpawnTimer=5.5,elapsed=0;
+let jumpBoostTimer=0,fastTimer=0,slowTimer=0,ghostTimer=0,invincibleTimer=0;
+let babyMode=false;
+let highScore=Number(localStorage.getItem('robodashHigh')||0);
+const obstacles=[];
+
+function currentRunner(){ return characters[activeName]; }
+
+function selectCharacter(name){
+  activeName=name;
+  for(const [key,obj] of Object.entries(characters)) obj.visible = key===name;
+
+  document.getElementById('billyBtn').classList.toggle('active',name==='Billy');
+  document.getElementById('bobBtn').classList.toggle('active',name==='Bob');
+  document.getElementById('lilyBtn').classList.toggle('active',name==='Lily');
+
+  for(const obj of Object.values(characters)){
+    obj.traverse(m=>{
+      if(m.isMesh && m.userData.originalMaterial)m.material=m.userData.originalMaterial;
+    });
+  }
+  const r=currentRunner();
+  r.position.x=targetX;
+  r.position.y=0;
+  r.position.z=2.4;
+  yVel=0;
+  grounded=true;
+  if(ghostTimer>0)setRunnerGhost(true);
+}
+
+document.getElementById('billyBtn').onclick=()=>selectCharacter('Billy');
+document.getElementById('bobBtn').onclick=()=>selectCharacter('Bob');
+document.getElementById('lilyBtn').onclick=()=>selectCharacter('Lily');
+
+/* ---------- obstacle ---------- */
+const wood=new THREE.MeshStandardMaterial({color:0x9b7549,roughness:.8});
+const stone=new THREE.MeshStandardMaterial({color:0x777777,roughness:.8});
+const powerups=[];
+const xpOrbs=[];
+const xpOrbMat=new THREE.MeshStandardMaterial({
+  color:0xffffff,
+  emissive:0xffffff,
+  emissiveIntensity:.35,
+  roughness:.25
+});
+function spawnXPOrb(){
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12),xpOrbMat);
+  orb.position.set(lanes[Math.floor(Math.random()*3)],.9,-58);
+  orb.castShadow=true;
+  scene.add(orb);
+  xpOrbs.push(orb);
+}
+
+const goldenMat=new THREE.MeshStandardMaterial({
+  color:0xffc928,
+  emissive:0xff9d00,
+  emissiveIntensity:.9,
+  metalness:.55,
+  roughness:.22
+});
+function spawnGoldenOrb(){
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.43,22,16),goldenMat);
+  orb.userData.type='invincible';
+  orb.userData.golden=true;
+  orb.position.set(lanes[Math.floor(Math.random()*3)],1.08,-64);
+  orb.castShadow=true;
+  scene.add(orb);
+  powerups.push(orb);
+}
+
+const powerMats={
+  jump:new THREE.MeshStandardMaterial({color:0x25d64c,emissive:0x0b5519,emissiveIntensity:.55,roughness:.35}),
+  fast:new THREE.MeshStandardMaterial({color:0x2497ff,emissive:0x0b365b,emissiveIntensity:.55,roughness:.35}),
+  slow:new THREE.MeshStandardMaterial({color:0x555b60,emissive:0x16191b,emissiveIntensity:.35,roughness:.45}),
+  ghost:new THREE.MeshStandardMaterial({color:0xb88cff,emissive:0x412867,emissiveIntensity:.5,roughness:.35})
+};
+function spawnPowerup(){
+  const types=['jump','fast','slow','ghost'];
+  const type=types[Math.floor(Math.random()*types.length)];
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.36,18,14),powerMats[type]);
+  orb.userData.type=type;
+  orb.position.set(lanes[Math.floor(Math.random()*3)],1.05,-60);
+  orb.castShadow=true;
+  scene.add(orb);
+  powerups.push(orb);
+}
+function activatePowerup(type){
+  if(type==='jump') jumpBoostTimer=5;
+  if(type==='fast') fastTimer=5;
+  if(type==='slow') slowTimer=5;
+  if(type==='invincible') invincibleTimer=15;
+  if(type==='ghost'){
+    ghostTimer=5;
+    setRunnerGhost(true);
+  }
+}
+function updatePowerHud(){
+  const map=[
+    ['jumpPill',jumpBoostTimer],
+    ['fastPill',fastTimer],
+    ['slowPill',slowTimer],
+    ['ghostPill',ghostTimer],
+    ['invinciblePill',invincibleTimer]
+  ];
+  for(const [id,timer] of map){
+    const el=document.getElementById(id);
+    el.style.display=timer>0?'block':'none';
+    el.querySelector('span').textContent=timer>0?timer.toFixed(1)+'s':'';
+  }
+}
+
+
+
+/* Pink flying fists: high obstacles that must be crouched under. */
+const flyingFists=[];
+const fistPink=new THREE.MeshStandardMaterial({color:0xff4fa3,roughness:.48});
+
+function spawnFlyingFist(){
+  const fist=new THREE.Group();
+
+  /* chunky palm */
+  mesh(fist,new THREE.BoxGeometry(1.15,.72,.72),fistPink,0,0,0);
+
+  /* four curled fingers across the top/front */
+  for(let i=0;i<4;i++){
+    const finger=mesh(
+      fist,
+      new THREE.BoxGeometry(.25,.55,.42),
+      fistPink,
+      -.42+i*.28,.43,-.12
+    );
+    finger.rotation.x=-.18;
+  }
+
+  /* thumb */
+  const thumb=mesh(fist,new THREE.BoxGeometry(.34,.58,.4),fistPink,-.68,-.03,-.02);
+  thumb.rotation.z=-.55;
+
+  fist.position.set(lanes[Math.floor(Math.random()*3)],3.05,-66);
+  fist.userData.isFlyingFist=true;
+  scene.add(fist);
+  flyingFists.push(fist);
+}
+
+function spawnObstacle(){
+  const o=new THREE.Mesh(
+    Math.random()<.5 ? new THREE.BoxGeometry(1.55,1.05,1) : new THREE.BoxGeometry(1.6,1.6,1),
+    Math.random()<.5 ? wood : stone
+  );
+  o.userData.lane=Math.floor(Math.random()*3);
+  o.position.x=lanes[o.userData.lane];
+  o.position.y=o.geometry.parameters.height/2;
+  o.position.z=-67;
+  o.castShadow=true;
+  scene.add(o);
+  obstacles.push(o);
+}
+
+/* ---------- input ---------- */
+function move(dir){
+  if(!running||settingsOpen||gameOver)return;
+  lane=Math.max(0,Math.min(2,lane+dir));
+  targetX=lanes[lane];
+}
+function jump(){
+  if(running&&!settingsOpen&&!gameOver&&grounded&&!crouching){
+    yVel=jumpBoostTimer>0 ? 15.0 : 11.2;
+    grounded=false;
+  }
+}
+function crouch(){
+  if(!running||settingsOpen||gameOver||!grounded)return;
+  crouching=true;
+  crouchTimer=.7;
+}
+function applyCrouchVisual(){
+  const runner=currentRunner();
+  if(crouching){
+    runner.scale.y += (.58-runner.scale.y)*.28;
+    runner.position.y=0;
+  }else{
+    runner.scale.y += (1-runner.scale.y)*.22;
+  }
+}
+
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')move(-1);
+  if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')move(1);
+  if(e.key==='ArrowUp'||e.key===' '||e.key.toLowerCase()==='w')jump();
+  if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')crouch();
+});
+addEventListener('wheel',e=>{
+  if(e.deltaY>0)crouch();
+},{passive:true});
+
+let touchStart=null;
+addEventListener('touchstart',e=>{
+  const t=e.touches[0];touchStart={x:t.clientX,y:t.clientY};
+},{passive:true});
+addEventListener('touchend',e=>{
+  if(!touchStart||settingsOpen)return;
+  const t=e.changedTouches[0],dx=t.clientX-touchStart.x,dy=t.clientY-touchStart.y;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>35)move(dx>0?1:-1);
+  else if(dy<-25)jump();
+  else if(dy>25)crouch();
+  else if(Math.abs(dx)<18)jump();
+  touchStart=null;
+},{passive:true});
+
+/* ---------- settings ---------- */
+document.getElementById('gear').onclick=()=>{
+  if(gameOver)return;
+  settingsOpen=true;
+  document.getElementById('settingsOverlay').style.display='block';
+};
+document.getElementById('closeSettings').onclick=()=>{
+  settingsOpen=false;
+  document.getElementById('settingsOverlay').style.display='none';
+};
+const babyToggle=document.getElementById('babyToggle');
+const babyModeRow=document.getElementById('babyModeRow');
+
+function updateBabyModeAvailability(){
+  const allowed=gameMode==='Endless';
+  babyToggle.disabled=!allowed;
+  babyModeRow.classList.toggle('disabled',!allowed);
+  document.getElementById('babyNote').textContent=allowed
+    ? 'Baby Mode = free endless running. Nothing can hurt you — just run and collect orbs.'
+    : 'Baby Mode is only available in Endless Mode.';
+  if(!allowed){
+    babyToggle.checked=false;
+    babyMode=false;
+  }
+}
+
+babyToggle.onchange=e=>{
+  babyMode=(gameMode==='Endless') && e.target.checked;
+};
+
+/* One source of truth for all current and future hazards. */
+function protectedFromAllHazards(){
+  return (babyMode && gameMode==='Endless') || invincibleTimer>0;
+}
+function protectedFromFlyingFists(){
+  return protectedFromAllHazards() || ghostTimer>0;
+}
+function startGame(mode){
+  gameMode=mode;
+  running=true;
+  gameOver=false;
+  document.getElementById('startOverlay').style.display='none';
+
+  if(mode==='Endless'){
+    document.getElementById('level').textContent='ENDLESS MODE';
+    document.getElementById('progressWrap').style.display='none';
+  }else{
+    babyMode=false;
+    babyToggle.checked=false;
+    document.getElementById('progressWrap').style.display='block';
+  }
+
+  updateBabyModeAvailability();
+}
+document.getElementById('endlessModeBtn').onclick=()=>startGame('Endless');
+document.getElementById('adventureModeBtn').onclick=()=>startGame('Adventure');
+
+
+/* ---------- pause ---------- */
+function togglePause(){
+  if(settingsOpen||gameOver)return;
+  running=!running;
+  if(!running){
+    document.getElementById('statusTitle').textContent='ROBO-DASH';
+    document.getElementById('mainTitle').textContent='PAUSED';
+    document.getElementById('finalScore').textContent='Score: '+Math.floor(score);
+    document.getElementById('retry').style.display='none';
+    document.getElementById('resume').style.display='inline-block';
+    document.getElementById('overlay').style.display='flex';
+  }else{
+    document.getElementById('overlay').style.display='none';
+  }
+}
+document.getElementById('pause').onclick=togglePause;
+document.getElementById('resume').onclick=togglePause;
+
+/* ---------- game over ---------- */
+function endGame(){
+  if(protectedFromAllHazards())return;
+  gameOver=true;
+  running=false;
+  const s=Math.floor(score);
+  let msg='';
+  if(s>highScore){
+    highScore=s;
+    localStorage.setItem('robodashHigh',highScore);
+    msg='New High Score!';
+  }
+  document.getElementById('statusTitle').textContent='SUPER JUMP!';
+  document.getElementById('mainTitle').textContent='GAME OVER';
+  document.getElementById('finalScore').textContent='Score: '+s;
+  document.getElementById('newHigh').textContent=msg;
+  document.getElementById('retry').style.display='inline-block';
+  document.getElementById('resume').style.display='none';
+  document.getElementById('overlay').style.display='flex';
+}
+
+function reset(){
+  obstacles.forEach(o=>scene.remove(o));
+  powerups.forEach(o=>scene.remove(o));
+  xpOrbs.forEach(o=>scene.remove(o));
+  flyingFists.forEach(o=>scene.remove(o));
+  obstacles.length=0;
+  powerups.length=0;
+  xpOrbs.length=0;
+  flyingFists.length=0;
+  lane=1;targetX=0;
+  for(const c of Object.values(characters))c.position.set(0,0,2.4);
+  yVel=0;grounded=true;
+  score=0;level=1;speed=13;spawnTimer=.9;powerSpawnTimer=3.2;xpSpawnTimer=.8;elapsed=0;
+  jumpBoostTimer=fastTimer=slowTimer=ghostTimer=invincibleTimer=0;
+  crouching=false;crouchTimer=0;
+  babyMode=false;
+  babyToggle.checked=false;
+  setRunnerGhost(false);
+  updateBabyModeAvailability();
+  gameOver=false;running=true;settingsOpen=false;
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('settingsOverlay').style.display='none';
+}
+document.getElementById('retry').onclick=reset;
+
+/* ---------- animation ---------- */
+const clock=new THREE.Clock();
+
+function animate(){
+  const dt=Math.min(clock.getDelta(),.035);
+
+  if(running&&!gameOver&&!settingsOpen){
+    elapsed+=dt;
+    level=1+Math.floor(score/500);
+
+    /* The longer you survive, the faster RoboDash gets. */
+    let baseSpeed = 13 + elapsed*.075;
+    if(gameMode==='Adventure') baseSpeed += (level-1)*1.15;
+    if(fastTimer>0) baseSpeed += 6;
+    if(slowTimer>0) baseSpeed -= 5;
+    speed=Math.max(7,Math.min(32,baseSpeed));
+    /* XP is earned from white XP orbs instead of automatically while running. */
+
+    if(crouchTimer>0){
+      crouchTimer-=dt;
+      if(crouchTimer<=0)crouching=false;
+    }
+    jumpBoostTimer=Math.max(0,jumpBoostTimer-dt);
+    fastTimer=Math.max(0,fastTimer-dt);
+    slowTimer=Math.max(0,slowTimer-dt);
+    invincibleTimer=Math.max(0,invincibleTimer-dt);
+    if(ghostTimer>0){
+      ghostTimer=Math.max(0,ghostTimer-dt);
+      if(ghostTimer===0)setRunnerGhost(false);
+    }
+
+    const runner=currentRunner();
+
+    runner.position.x+=(targetX-runner.position.x)*Math.min(1,dt*12);
+    applyCrouchVisual();
+
+    yVel-=22*dt;
+    runner.position.y+=yVel*dt;
+    if(runner.position.y<=0){
+      runner.position.y=0;
+      yVel=0;
+      grounded=true;
+    }
+
+    /* CLEAR, VISIBLE RUNNING ANIMATION */
+    const eyeOff=ghostEyeOffset();
+    ghostEyes.position.set(runner.position.x,runner.position.y+eyeOff.y,runner.position.z+eyeOff.z);
+    ghostEyes.scale.y=runner.scale.y;
+
+    const phase=elapsed*10.5;
+
+    if(activeName==='Billy'){
+      billyLA.rotation.x=Math.sin(phase)*.95;
+      billyRA.rotation.x=-Math.sin(phase)*.95;
+      billyLL.rotation.x=-Math.sin(phase)*.95;
+      billyRL.rotation.x=Math.sin(phase)*.95;
+      billyTorso.position.y=2.15+Math.abs(Math.sin(phase))*0.05;
+    }
+    if(activeName==='Bob'){
+      bobLA.rotation.x=Math.sin(phase)*.75;
+      bobRA.rotation.x=-Math.sin(phase)*.75;
+      bobLeftLeg.rotation.x=-Math.sin(phase)*.42;
+      bobRightLeg.rotation.x=Math.sin(phase)*.42;
+      bobBody.rotation.z=Math.sin(phase*2)*.035;
+      bob.position.y+=Math.abs(Math.sin(phase))*0.015;
+    }
+    if(activeName==='Lily'){
+      lilyLA.rotation.x=Math.sin(phase)*.72;
+      lilyRA.rotation.x=-Math.sin(phase)*.72;
+      lilyBody.rotation.z=Math.sin(phase*2)*.035;
+      lilyHair.rotation.z=-Math.sin(phase*2)*.018;
+    }
+
+    for(const p of pathSegments){
+      p.position.z+=speed*dt;
+      if(p.position.z>10)p.position.z-=SEG_COUNT*SEG_LEN;
+    }
+
+    fistSpawnTimer-=dt;
+    if(fistSpawnTimer<=0){
+      spawnFlyingFist();
+      fistSpawnTimer=5.0+Math.random()*4.5;
+    }
+
+    spawnTimer-=dt;
+    if(spawnTimer<=0){
+      spawnObstacle();
+      spawnTimer=Math.max(.62,1.25-(gameMode==='Adventure'?level*.03:0))+Math.random()*.4;
+    }
+
+    /* White XP orbs: common, but spaced out enough to stay meaningful. */
+    xpSpawnTimer-=dt;
+    if(xpSpawnTimer<=0){
+      spawnXPOrb();
+      xpSpawnTimer=.65+Math.random()*.75;
+    }
+
+    for(let i=xpOrbs.length-1;i>=0;i--){
+      const x=xpOrbs[i];
+      x.position.z+=speed*dt;
+      x.rotation.y+=dt*4;
+      if(x.position.z>12){
+        scene.remove(x);xpOrbs.splice(i,1);continue;
+      }
+      const xBox=new THREE.Box3().setFromObject(x);
+      const collectBox=new THREE.Box3().setFromCenterAndSize(
+        new THREE.Vector3(runner.position.x,runner.position.y+1.55,runner.position.z),
+        new THREE.Vector3(1.45,crouching?1.8:3.25,1.25)
+      );
+      if(collectBox.intersectsBox(xBox)){
+        score+=10;
+        scene.remove(x);xpOrbs.splice(i,1);
+      }
+    }
+
+    /* SUPER rare golden invincibility orb. */
+    goldenSpawnTimer-=dt;
+    if(goldenSpawnTimer<=0){
+      spawnGoldenOrb();
+      /* Usually only appears after a long stretch of running. */
+      goldenSpawnTimer=35+Math.random()*35;
+    }
+
+    powerSpawnTimer-=dt;
+    if(powerSpawnTimer<=0){
+      spawnPowerup();
+      powerSpawnTimer=8.0+Math.random()*5.0;
+    }
+
+    for(let i=powerups.length-1;i>=0;i--){
+      const p=powerups[i];
+      p.position.z+=speed*dt;
+      p.rotation.y+=dt*3;
+      if(p.position.z>12){
+        scene.remove(p);powerups.splice(i,1);continue;
+      }
+      const pBox=new THREE.Box3().setFromObject(p);
+      const collectBox=new THREE.Box3().setFromCenterAndSize(
+        new THREE.Vector3(runner.position.x,runner.position.y+1.65,runner.position.z),
+        new THREE.Vector3(1.4,crouching?1.7:3.3,1.2)
+      );
+      if(collectBox.intersectsBox(pBox)){
+        activatePowerup(p.userData.type);
+        scene.remove(p);powerups.splice(i,1);
+      }
+    }
+
+    const boxSize=activeName==='Bob'
+      ? new THREE.Vector3(1.25,3.4,.9)
+      : activeName==='Lily'
+        ? new THREE.Vector3(1.35,3.35,.88)
+        : new THREE.Vector3(1.05,3.45,.75);
+
+    const effectiveBox = crouching
+      ? new THREE.Vector3(boxSize.x,boxSize.y*.52,boxSize.z)
+      : boxSize;
+    const playerBox=new THREE.Box3().setFromCenterAndSize(
+      new THREE.Vector3(runner.position.x,runner.position.y+(crouching?.95:1.85),runner.position.z),
+      effectiveBox
+    );
+
+
+    for(let i=flyingFists.length-1;i>=0;i--){
+      const f=flyingFists[i];
+      f.position.z+=speed*dt*1.08;
+      f.rotation.z=Math.sin(elapsed*7+i)*.06;
+
+      if(f.position.z>12){
+        scene.remove(f);
+        flyingFists.splice(i,1);
+        continue;
+      }
+
+      /* At standing height the fist hits you.
+         Crouching lowers the player's collision box enough to pass underneath. */
+      if(!protectedFromFlyingFists()){
+        const fistBox=new THREE.Box3().setFromObject(f);
+        if(playerBox.intersectsBox(fistBox)){
+          endGame();
+          break;
+        }
+      }
+    }
+
+    for(let i=obstacles.length-1;i>=0;i--){
+      const o=obstacles[i];
+      o.position.z+=speed*dt;
+      if(o.position.z>12){
+        scene.remove(o);
+        obstacles.splice(i,1);
+        continue;
+      }
+      if(!protectedFromAllHazards()){
+        const ob=new THREE.Box3().setFromObject(o);
+        if(playerBox.intersectsBox(ob)){
+          endGame();
+          break;
+        }
+      }
+    }
+
+    camera.position.x+=(runner.position.x*.17-camera.position.x)*Math.min(1,dt*5);
+  }
+
+  const s=Math.floor(score);
+  if(gameMode==='Endless'){
+    document.getElementById('level').textContent='ENDLESS MODE';
+    document.getElementById('score').textContent='Score: '+s;
+  }else{
+    document.getElementById('level').textContent='LEVEL '+level;
+    document.getElementById('score').textContent='Score: '+s+' / '+(level*500);
+    document.getElementById('progress').style.width=((s%500)/500*100)+'%';
+  }
+  document.getElementById('high').textContent='High Score: '+Math.max(highScore,s);
+  updatePowerHud();
+
+  renderer.render(scene,camera);
+}
+
+renderer.setAnimationLoop(animate);
+
+/* render once immediately so Billy is visible BEFORE touching settings */
+renderer.render(scene,camera);
+
+addEventListener('resize',()=>{
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+</script>
+</body>
+</html>
