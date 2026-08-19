@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>RoboDash</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#83d1ec;font-family:Arial,Helvetica,sans-serif;touch-action:none}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+#ui{position:fixed;inset:0;pointer-events:none;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.35)}
+#top{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start}
+#stats{text-align:center;background:rgba(255,255,255,.12);padding:8px 18px;border-radius:16px}
+#level{font-size:14px;letter-spacing:2px}
+#score{font-size:28px;font-weight:800}
+#high{font-size:14px;margin-top:4px}
+#progressWrap{width:260px;max-width:55vw;height:6px;background:rgba(255,255,255,.3);border-radius:8px;margin:8px auto 0;overflow:hidden}
+#progress{height:100%;width:0;background:#fff}
+.btn{pointer-events:auto;background:rgba(50,65,70,.6);border:2px solid #fff;color:#fff;border-radius:12px;padding:10px 16px;font-size:18px;font-weight:700}
+#gear{width:54px;height:54px;padding:0;font-size:27px}
+#pause{min-width:105px}
+#hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(20,35,40,.45);padding:8px 13px;border-radius:12px;font-size:13px;white-space:nowrap}
+
+#settingsOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:20}
+#settingsPanel{position:absolute;top:76px;left:34px;width:min(420px,78vw);background:rgba(18,30,33,.96);border:2px solid rgba(255,255,255,.65);border-radius:20px;padding:24px;color:#fff}
+#settingsHead{display:flex;justify-content:space-between;align-items:center}
+#settingsHead h2{margin:0;font-size:24px}
+#closeSettings{border:0;background:transparent;color:#fff;font-size:28px}
+.sectionTitle{font-size:14px;letter-spacing:1.5px;opacity:.75;margin:18px 0 10px}
+#characterRow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.charBtn{border:2px solid rgba(255,255,255,.35);border-radius:10px;padding:10px 4px;color:#fff;font-size:14px;background:#666}
+.charBtn.active{border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.65)}
+#billyBtn{background:#777}
+#bobBtn{background:#e39c0d}
+#lilyBtn{background:#ee6815}
+.charBtn.locked{opacity:.45}
+.settingRow{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.switch{position:relative;width:54px;height:30px}
+.switch input{display:none}
+.slider{position:absolute;inset:0;background:#555;border-radius:18px}
+.slider:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}
+.switch input:checked+.slider{background:#3f8df5}
+.switch input:checked+.slider:before{transform:translateX(24px)}
+#babyNote{text-align:center;font-size:12px;opacity:.7}
+#babyModeRow.disabled{opacity:.38;filter:grayscale(.5)}
+
+#authOverlay{display:flex;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(20,35,40,.58);z-index:60}
+#authPanel{width:min(520px,88vw);background:rgba(28,44,48,.97);border:2px solid #fff;border-radius:22px;padding:28px;color:#fff;text-align:center;box-shadow:0 18px 55px rgba(0,0,0,.4)}
+#authPanel h1{font-size:44px;margin:0 0 6px}
+#authPanel h2{margin:8px 0 16px}
+.authBtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.authBtn{min-width:135px;padding:13px 16px;border-radius:12px;border:2px solid #fff;background:#536f78;color:#fff;font-size:16px;font-weight:800}
+.authForm{display:none;text-align:left;margin-top:18px}
+.authForm label{display:block;font-size:13px;margin:10px 0 5px;opacity:.9}
+.authForm input{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.45);background:#1e3034;color:#fff;font-size:16px}
+.authHelp{font-size:12px;line-height:1.45;opacity:.78;margin-top:8px}
+.authError{min-height:18px;color:#ff9b9b;font-size:13px;margin-top:8px}
+.authSuccess{color:#9ff3b3}
+.authActionRow{display:flex;gap:10px;margin-top:14px}
+.authActionRow button{flex:1}
+#guestDisclaimer{display:none;text-align:left;margin-top:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:16px;line-height:1.45}
+#accountBadge{position:fixed;left:16px;bottom:16px;z-index:15;background:rgba(20,35,40,.62);color:#fff;padding:7px 10px;border-radius:10px;font-size:12px;pointer-events:none}
+#accountActions{display:none;margin-top:14px;gap:10px;flex-direction:column}
+#accountActions .btn{width:100%;box-sizing:border-box;font-size:15px}
+#changePasswordBtn{background:#526f82}
+#deleteAccountBtn{background:#8d3c45}
+.accountModal{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:80}
+.accountModalPanel{width:min(470px,88vw);background:#1d3034;color:#fff;border:2px solid #fff;border-radius:20px;padding:24px}
+.accountModalPanel h2{margin:0 0 10px}
+.accountModalPanel p{font-size:13px;line-height:1.45;opacity:.88}
+.accountModalPanel label{display:block;font-size:13px;margin:11px 0 5px}
+.accountModalPanel input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.35);background:#132326;color:#fff;font-size:16px}
+.modalError{min-height:18px;color:#ffaaaa;font-size:13px;margin-top:8px}
+.modalSuccess{min-height:18px;color:#a8f1b8;font-size:13px;margin-top:8px}
+.modalActions{display:flex;gap:10px;margin-top:14px}
+.modalActions button{flex:1}
+.dangerBtn{background:#a3313f}
+
+#startOverlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(20,35,40,.45);z-index:40}
+#startPanel{width:min(520px,86vw);text-align:center;background:rgba(28,44,48,.95);border:2px solid #fff;border-radius:22px;padding:28px;color:#fff;box-shadow:0 18px 55px rgba(0,0,0,.35)}
+#startPanel h1{font-size:46px;margin:0 0 8px}
+#levelSelectOverlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(20,35,40,.48);z-index:45}
+#preGameCharacterOverlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(20,35,40,.52);z-index:50}
+#preGameCharacterPanel{width:min(540px,88vw);background:rgba(28,44,48,.97);border:2px solid #fff;border-radius:22px;padding:26px;color:#fff;text-align:center;box-shadow:0 18px 55px rgba(0,0,0,.35)}
+#preGameCharacterPanel h2{margin:0 0 8px;font-size:32px}
+#preGameCharacterPanel p{opacity:.85;margin:0 0 18px}
+#preGameCharacterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.preGameCharBtn{padding:16px 8px;border-radius:13px;border:2px solid rgba(255,255,255,.7);background:#536f78;color:#fff;font-size:16px;font-weight:800}
+.preGameCharBtn.selected{border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.7);background:#6e8992}
+#confirmCharacterBtn{margin-top:16px;background:#4f8a65}
+#cancelCharacterBtn{margin-top:10px;background:#6a7478}
+.charBtn.gameLocked{opacity:.4;pointer-events:none}
+
+#levelSelectPanel{width:min(620px,88vw);background:rgba(28,44,48,.96);border:2px solid #fff;border-radius:22px;padding:26px;color:#fff;text-align:center;box-shadow:0 18px 55px rgba(0,0,0,.35)}
+#levelSelectPanel h2{margin:0 0 8px;font-size:34px}
+#levelSelectPanel p{opacity:.85;margin:0 0 18px}
+#levelGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.levelBtn{padding:18px 8px;border-radius:14px;border:2px solid rgba(255,255,255,.75);background:#4c6d77;color:#fff;font-weight:800;font-size:18px}
+.levelBtn small{display:block;font-size:11px;font-weight:500;opacity:.8;margin-top:5px}
+.levelBtn.locked{background:#3a4144;opacity:.5}
+.levelBtn.completed{background:#4f8a65}
+#backToModes{margin-top:18px;background:#6a7478}
+#startPanel p{opacity:.88;line-height:1.45}
+.modeBtns{display:flex;gap:14px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.modeBtn{min-width:190px;padding:16px;border-radius:14px;border:2px solid #fff;color:#fff;font-size:19px;font-weight:800;background:#4e6c76}
+.modeBtn small{display:block;font-size:12px;font-weight:500;opacity:.85;margin-top:5px}
+#powerHud{position:fixed;top:112px;left:50%;transform:translateX(-50%);z-index:12;display:flex;gap:8px;pointer-events:none}
+.powerPill{display:none;padding:7px 11px;border-radius:12px;background:rgba(20,30,34,.75);color:#fff;font-weight:700;font-size:13px;border:1px solid rgba(255,255,255,.55)}
+#overlay{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,.3);z-index:30}
+#panel{width:min(430px,82vw);text-align:center;background:rgba(55,70,75,.92);border:2px solid #fff;border-radius:20px;padding:26px;color:#fff}
+#panel h1{font-size:42px;margin:5px}
+#panel h2{font-size:20px;margin:5px}
+#panelBtns{display:flex;justify-content:center;gap:12px;margin-top:18px}
+#retry{background:#f33}
+#resume{background:#4d8b63;display:none}
+#quitRun{background:#666;display:none}
+</style>
+</head>
+<body>
+
+<div id="authOverlay">
+  <div id="authPanel">
+    <h1>ROBODASH</h1>
+    <h2 id="authTitle">Welcome</h2>
+
+    <div id="authHome">
+      <div class="authBtns">
+        <button id="showSignIn" class="authBtn">SIGN IN</button>
+        <button id="showSignUp" class="authBtn">SIGN UP</button>
+        <button id="showGuest" class="authBtn">GUEST MODE</button>
+      </div>
+    </div>
+
+    <div id="signInForm" class="authForm">
+      <label>Username</label>
+      <input id="signInUsername" autocomplete="username" maxlength="24">
+      <label>Password</label>
+      <input id="signInPassword" type="password" autocomplete="current-password">
+      <div id="signInError" class="authError"></div>
+      <div class="authActionRow">
+        <button id="signInBack" class="authBtn">BACK</button>
+        <button id="signInSubmit" class="authBtn">SIGN IN</button>
+      </div>
+    </div>
+
+    <div id="signUpForm" class="authForm">
+      <label>Username</label>
+      <input id="signUpUsername" autocomplete="username" maxlength="24">
+      <label>Password</label>
+      <input id="signUpPassword" type="password" autocomplete="new-password">
+      <label>Confirm Password</label>
+      <input id="signUpConfirm" type="password" autocomplete="new-password">
+      <div class="authHelp">
+        Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter and one special character. Spaces are not allowed.
+      </div>
+      <div id="signUpError" class="authError"></div>
+      <div class="authActionRow">
+        <button id="signUpBack" class="authBtn">BACK</button>
+        <button id="signUpSubmit" class="authBtn">CREATE ACCOUNT</button>
+      </div>
+    </div>
+
+    <div id="guestDisclaimer">
+      <strong>Disclaimer:</strong> If you choose ‘Guest Mode’ your progress may not be saved - it is recommended to create an account!
+      <div class="authActionRow">
+        <button id="guestBack" class="authBtn">BACK</button>
+        <button id="guestContinue" class="authBtn">CONTINUE AS GUEST</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="accountBadge">Not signed in</div>
+
+<div id="startOverlay">
+  <div id="startPanel">
+    <h1>ROBODASH</h1>
+    <p>Choose how you want to run.</p>
+    <div class="modeBtns">
+      <button id="endlessModeBtn" class="modeBtn">ENDLESS MODE<small>Run forever. No levels.</small></button>
+      <button id="adventureModeBtn" class="modeBtn">ADVENTURE MODE<small>Levels, obstacles and progression.</small></button>
+    </div>
+  </div>
+</div>
+
+<div id="preGameCharacterOverlay">
+  <div id="preGameCharacterPanel">
+    <h2>CHOOSE YOUR CHARACTER</h2>
+    <p>You cannot change your character during the run.</p>
+    <div id="preGameCharacterGrid">
+      <button class="preGameCharBtn selected" data-character="Billy">Billy</button>
+      <button class="preGameCharBtn" data-character="Bob">Bob</button>
+      <button class="preGameCharBtn" data-character="Lily">Lily</button>
+      <button class="preGameCharBtn" data-character="TMS">TMS</button>
+      <button class="preGameCharBtn" data-character="Eree">Eree</button>
+      <button class="preGameCharBtn" data-character="Borilla">Borilla</button>
+      <button class="preGameCharBtn" data-character="Sapling">Sapling</button>
+      <button class="preGameCharBtn" data-character="Watcheree">Watcheree</button>
+      <button class="preGameCharBtn" data-character="Fire Eree">Fire Eree</button>
+      <button class="preGameCharBtn" data-character="Serpently">Serpently</button>
+      <button class="preGameCharBtn" data-character="Scientist">Scientist</button>
+      <button class="preGameCharBtn" data-character="Ritty">Ritty</button>
+      <button class="preGameCharBtn" data-character="Riark">Riark</button>
+      <button class="preGameCharBtn" data-character="Right">Right</button>
+    </div>
+    <button id="confirmCharacterBtn" class="btn">CONFIRM</button>
+    <button id="cancelCharacterBtn" class="btn">BACK</button>
+  </div>
+</div>
+
+<div id="levelSelectOverlay">
+  <div id="levelSelectPanel">
+    <h2>ADVENTURE MODE</h2>
+    <p>Complete each level to unlock the next one.</p>
+    <div id="levelGrid"></div>
+    <button id="backToModes" class="btn">BACK</button>
+  </div>
+</div>
+
+<div id="powerHud">
+  <div id="jumpPill" class="powerPill">🟢 HIGHER JUMP <span></span></div>
+  <div id="fastPill" class="powerPill">🔵 FASTER SPEED <span></span></div>
+  <div id="slowPill" class="powerPill">⚫ SLOWER SPEED <span></span></div>
+  <div id="ghostPill" class="powerPill">👻 GHOST MODE <span></span></div>
+  <div id="invinciblePill" class="powerPill">🌟 INVINCIBLE <span></span></div>
+</div>
+
+<div id="ui">
+  <div id="top">
+    <button id="gear" class="btn">⚙</button>
+    <div id="stats">
+      <div id="level">LEVEL 1</div>
+      <div id="score">Score: 0 / 500</div>
+      <div id="progressWrap"><div id="progress"></div></div>
+      <div id="high">High Score: 0</div>
+    </div>
+    <button id="pause" class="btn">PAUSE</button>
+  </div>
+  <div id="hint">← → move • ↑ jump • ↓ crouch • swipe down to crouch</div>
+</div>
+
+<div id="settingsOverlay">
+  <div id="settingsPanel">
+    <div id="settingsHead"><h2>SETTINGS</h2><button id="closeSettings">✕</button></div>
+    <div class="sectionTitle">CHARACTER SELECT</div>
+    <div id="characterRow">
+      <button id="billyBtn" class="charBtn active">Billy</button>
+      <button id="bobBtn" class="charBtn">Bob</button>
+      <button id="lilyBtn" class="charBtn">Lily</button>
+      <button id="ereeBtn" class="charBtn">Eree</button>
+      <button id="borillaBtn" class="charBtn">Borilla</button>
+      <button id="saplingBtn" class="charBtn">Sapling</button>
+      <button id="watchereeBtn" class="charBtn">Watcheree</button>
+      <button id="fireEreeBtn" class="charBtn">Fire Eree</button>
+      <button id="serpentlyBtn" class="charBtn">Serpently</button>
+      <button id="scientistBtn" class="charBtn">Scientist</button>
+      <button id="rittyBtn" class="charBtn">Ritty</button>
+      <button id="riarkBtn" class="charBtn">Riark</button>
+      <button id="rightBtn" class="charBtn">Right</button>
+      <button id="tmsBtn" class="charBtn">TMS</button>
+    </div>
+    <div class="sectionTitle">GAMEPLAY</div>
+    <div class="settingRow"><span>🔊 Sound Effects</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="settingRow"><span>⚡ Power Ups</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="settingRow"><span>🔮 Energy Orbs</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+    <div class="settingRow" id="babyModeRow"><span>👶 Baby Mode</span><label class="switch"><input id="babyToggle" type="checkbox"><span class="slider"></span></label></div>
+    <div id="babyNote">Baby Mode = endless running with no collision game over.</div>
+    <div id="accountActions">
+      <button id="changePasswordBtn" class="btn">CHANGE PASSWORD</button>
+      <button id="deleteAccountBtn" class="btn">DELETE ACCOUNT</button>
+      <button id="signOutBtn" class="btn" style="background:#6a5151">SIGN OUT</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="changePasswordModal" class="accountModal">
+  <div class="accountModalPanel">
+    <h2>CHANGE PASSWORD</h2>
+    <p>Your new password must be at least 8 characters and include uppercase, lowercase and a special character. Spaces are not allowed.</p>
+    <label>Current Password</label><input id="currentPasswordInput" type="password">
+    <label>New Password</label><input id="newPasswordInput" type="password">
+    <label>Confirm New Password</label><input id="confirmNewPasswordInput" type="password">
+    <div id="changePasswordMessage" class="modalError"></div>
+    <div class="modalActions"><button id="cancelChangePassword" class="btn">CANCEL</button><button id="saveNewPassword" class="btn">CHANGE</button></div>
+  </div>
+</div>
+<div id="deleteAccountModal" class="accountModal">
+  <div class="accountModalPanel">
+    <h2>DELETE ACCOUNT</h2>
+    <p><strong>This permanently deletes your RoboDash account and saved online progress.</strong> This cannot be undone.</p>
+    <label>Current Password</label><input id="deletePasswordInput" type="password">
+    <label>Type DELETE to confirm</label><input id="deleteConfirmInput" maxlength="6">
+    <div id="deleteAccountMessage" class="modalError"></div>
+    <div class="modalActions"><button id="cancelDeleteAccount" class="btn">CANCEL</button><button id="confirmDeleteAccount" class="btn dangerBtn">DELETE FOREVER</button></div>
+  </div>
+</div>
+<div id="overlay">
+  <div id="panel">
+    <h2 id="statusTitle">ROBO-DASH</h2>
+    <h1 id="mainTitle">GAME OVER</h1>
+    <p id="finalScore">Score: 0</p>
+    <p id="newHigh"></p>
+    <div id="panelBtns">
+      <button id="retry" class="btn">RETRY</button>
+      <button id="quitRun" class="btn">QUIT</button>
+      <button id="resume" class="btn">RESUME</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL='https://dxrhxpcmcxfmidlvrnmn.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_Btiofwde4-K9dk6z7Wi1bw_upq3-dXN';
+const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+
+/* ---------- renderer ---------- */
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x83d1ec);
+scene.fog = new THREE.Fog(0x83d1ec, 26, 95);
+
+const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 160);
+camera.position.set(0, 5, 8.7);
+camera.lookAt(0, 2.0, -12);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6d9b55, 2.7));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(8,14,7);
+sun.castShadow = true;
+scene.add(sun);
+
+/* ---------- path ---------- */
+const pathMat = new THREE.MeshStandardMaterial({color:0xa4ed62, roughness:1});
+const edgeMat = new THREE.MeshStandardMaterial({color:0x7bc849, roughness:1});
+const pathSegments = [];
+const SEG_LEN = 10, SEG_COUNT = 15;
+
+for(let i=0;i<SEG_COUNT;i++){
+  const group = new THREE.Group();
+
+  const path = new THREE.Mesh(new THREE.BoxGeometry(9.5,.35,SEG_LEN),pathMat);
+  path.position.y = -.18;
+  path.receiveShadow = true;
+  group.add(path);
+
+  for(const x of [-5.15,5.15]){
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(.8,.37,SEG_LEN),edgeMat);
+    edge.position.set(x,-.19,0);
+    edge.receiveShadow = true;
+    group.add(edge);
+  }
+
+  for(let j=0;j<10;j++){
+    const h=.25+Math.random()*.55;
+    const blade=new THREE.Mesh(
+      new THREE.BoxGeometry(.07,h,.07),
+      new THREE.MeshStandardMaterial({color:Math.random()>.5?0x79b84a:0xb6e66c,roughness:1})
+    );
+    const side=Math.random()>.5?1:-1;
+    blade.position.set(side*(4.0+Math.random()*1.4),h/2,(Math.random()-.5)*SEG_LEN);
+    blade.rotation.z=(Math.random()-.5)*.28;
+    group.add(blade);
+  }
+
+  group.position.z = -i*SEG_LEN;
+  scene.add(group);
+  pathSegments.push(group);
+}
+
+/* ---------- helpers ---------- */
+function mesh(parent,geometry,material,x,y,z){
+  const m = new THREE.Mesh(geometry,material);
+  m.position.set(x,y,z);
+  m.castShadow = true;
+  parent.add(m);
+  return m;
+}
+
+const silver = new THREE.MeshStandardMaterial({color:0xb9c1c3,metalness:.2,roughness:.55});
+const silver2 = new THREE.MeshStandardMaterial({color:0x899597,metalness:.15,roughness:.55});
+const antennaDark = new THREE.MeshStandardMaterial({color:0x2c3335,roughness:.65});
+const red = new THREE.MeshStandardMaterial({color:0xe9232c,roughness:.5});
+
+/* ---------- BILLY ---------- */
+const billy = new THREE.Group();
+billy.position.set(0,0,2.4);
+scene.add(billy);
+
+const billyTorso = mesh(billy,new THREE.BoxGeometry(1.35,1.55,.82),silver,0,2.15,0);
+mesh(billy,new THREE.BoxGeometry(1.08,.86,.8),silver,0,3.46,0);
+mesh(billy,new THREE.BoxGeometry(1.42,.18,.85),silver2,0,2.92,0);
+mesh(billy,new THREE.CylinderGeometry(.055,.055,.5,12),antennaDark,0,4.14,0);
+mesh(billy,new THREE.SphereGeometry(.18,16,12),red,0,4.45,0);
+
+const billyLA = new THREE.Group(), billyRA = new THREE.Group();
+billyLA.position.set(-.88,2.72,0);
+billyRA.position.set(.88,2.72,0);
+billy.add(billyLA,billyRA);
+
+/* Billy arms are SILVER, not black */
+mesh(billyLA,new THREE.BoxGeometry(.34,1.0,.4),silver,0,-.47,0);
+mesh(billyRA,new THREE.BoxGeometry(.34,1.0,.4),silver,0,-.47,0);
+mesh(billyLA,new THREE.BoxGeometry(.4,.33,.43),silver2,0,-1.02,0);
+mesh(billyRA,new THREE.BoxGeometry(.4,.33,.43),silver2,0,-1.02,0);
+
+const billyLL = new THREE.Group(), billyRL = new THREE.Group();
+billyLL.position.set(-.36,1.42,0);
+billyRL.position.set(.36,1.42,0);
+billy.add(billyLL,billyRL);
+
+/* Billy legs are SILVER, not black */
+mesh(billyLL,new THREE.BoxGeometry(.42,1.16,.5),silver,0,-.53,0);
+mesh(billyRL,new THREE.BoxGeometry(.42,1.16,.5),silver,0,-.53,0);
+mesh(billyLL,new THREE.BoxGeometry(.52,.31,.72),silver2,0,-1.13,-.12);
+mesh(billyRL,new THREE.BoxGeometry(.52,.31,.72),silver2,0,-1.13,-.12);
+
+/* ---------- BOB ---------- */
+const bobYellow = new THREE.MeshStandardMaterial({color:0xf1dc25,roughness:.6});
+const bobOrange = new THREE.MeshStandardMaterial({color:0xe95e13,roughness:.6});
+const bobDark = new THREE.MeshStandardMaterial({color:0x222222,roughness:.8});
+
+const bob = new THREE.Group();
+bob.position.set(0,0,2.4);
+bob.visible = false;
+scene.add(bob);
+
+const bobBody = mesh(bob,new THREE.SphereGeometry(.78,24,18),bobOrange,0,1.75,0);
+bobBody.scale.set(.88,1.25,.72);
+
+const bobHead = mesh(bob,new THREE.SphereGeometry(.83,28,20),bobYellow,0,3.05,0);
+bobHead.scale.z=.92;
+
+const bobLA=new THREE.Group(),bobRA=new THREE.Group();
+bobLA.position.set(-.78,2.15,0);
+bobRA.position.set(.78,2.15,0);
+bob.add(bobLA,bobRA);
+mesh(bobLA,new THREE.BoxGeometry(.28,.82,.34),bobYellow,0,-.32,0);
+mesh(bobRA,new THREE.BoxGeometry(.28,.82,.34),bobYellow,0,-.32,0);
+
+/* Bob's normal Robodex legs/feet:
+   two yellow oval RINGS with transparent/open centers */
+const bobLeftLeg=new THREE.Group(), bobRightLeg=new THREE.Group();
+bobLeftLeg.position.set(-.35,.92,0);
+bobRightLeg.position.set(.35,.92,0);
+bob.add(bobLeftLeg,bobRightLeg);
+
+const bobLeftFoot=mesh(
+  bobLeftLeg,
+  new THREE.TorusGeometry(.34,.12,14,28),
+  bobYellow,
+  0,-.24,.03
+);
+bobLeftFoot.scale.set(.92,1.28,.78);
+bobLeftFoot.rotation.x=Math.PI/2;
+
+const bobRightFoot=mesh(
+  bobRightLeg,
+  new THREE.TorusGeometry(.34,.12,14,28),
+  bobYellow,
+  0,-.24,.03
+);
+bobRightFoot.scale.set(.92,1.28,.78);
+bobRightFoot.rotation.x=Math.PI/2;
+
+/* ---------- LILY ---------- */
+const lilyOrange = new THREE.MeshStandardMaterial({color:0xe86714,roughness:.62});
+const lilyBrown = new THREE.MeshStandardMaterial({color:0x4a2815,roughness:.72});
+
+const lily = new THREE.Group();
+lily.position.set(0,0,2.4);
+lily.visible = false;
+scene.add(lily);
+
+const lilyBody=mesh(lily,new THREE.CylinderGeometry(.48,.72,1.75,18),lilyOrange,0,1.55,0);
+lilyBody.scale.z=.78;
+
+const lilyHair=mesh(lily,new THREE.CylinderGeometry(.52,1.08,1.55,18),lilyBrown,0,2.75,0);
+lilyHair.scale.z=.82;
+
+const lilyLA=new THREE.Group(),lilyRA=new THREE.Group();
+lilyLA.position.set(-.72,2.0,0);
+lilyRA.position.set(.72,2.0,0);
+lily.add(lilyLA,lilyRA);
+mesh(lilyLA,new THREE.BoxGeometry(.22,.92,.28),lilyOrange,0,-.36,0);
+mesh(lilyRA,new THREE.BoxGeometry(.22,.92,.28),lilyOrange,0,-.36,0);
+
+
+
+/* ---------- THE MAD SCIENTIST (TMS) ---------- */
+/* 3D interpretation of the existing #017 Robodex artwork. */
+const tmsGreen = new THREE.MeshStandardMaterial({color:0x55ff00,roughness:.58});
+const tmsWhite = new THREE.MeshStandardMaterial({color:0xffffff,roughness:.72});
+const tmsBlack = new THREE.MeshStandardMaterial({color:0x080808,roughness:.72});
+
+const tms = new THREE.Group();
+tms.position.set(0,0,2.4);
+tms.visible=false;
+scene.add(tms);
+
+/* broad rectangular body + tall rectangular head */
+mesh(tms,new THREE.BoxGeometry(1.72,1.48,.78),tmsGreen,0,1.78,0);
+mesh(tms,new THREE.BoxGeometry(1.16,1.20,.76),tmsGreen,0,3.03,0);
+
+/* white cloud-like scientist hair tufts on both sides */
+for(const side of [-1,1]){
+  const hx=side*.62;
+  mesh(tms,new THREE.SphereGeometry(.30,18,14),tmsWhite,hx,3.60,0);
+  mesh(tms,new THREE.SphereGeometry(.25,18,14),tmsWhite,hx+side*.18,3.53,.02);
+  mesh(tms,new THREE.SphereGeometry(.23,18,14),tmsWhite,hx-side*.12,3.76,.01);
+}
+
+/* Robodex-style vertical eyes on the front */
+mesh(tms,new THREE.BoxGeometry(.10,.38,.07),tmsBlack,-.22,3.18,-.405);
+mesh(tms,new THREE.BoxGeometry(.10,.38,.07),tmsBlack,.22,3.18,-.405);
+
+/* smiling mouth: three small bars forming a curved smile */
+const smileMid=mesh(tms,new THREE.BoxGeometry(.36,.075,.07),tmsBlack,0,2.84,-.408);
+const smileL=mesh(tms,new THREE.BoxGeometry(.22,.075,.07),tmsBlack,-.25,2.91,-.408);
+const smileR=mesh(tms,new THREE.BoxGeometry(.22,.075,.07),tmsBlack,.25,2.91,-.408);
+smileL.rotation.z=-.28; smileR.rotation.z=.28;
+
+/* chest display with IQ:1B */
+const chestFrame=mesh(tms,new THREE.BoxGeometry(1.18,.62,.08),tmsBlack,0,1.88,-.435);
+const chestScreen=mesh(tms,new THREE.BoxGeometry(1.02,.48,.075),tmsGreen,0,1.88,-.48);
+
+/* simple 3D IQ:1B marks, matching the hand-drawn chest label */
+function chestBar(x,y,w,h,rot=0){
+  const b=mesh(tms,new THREE.BoxGeometry(w,h,.055),tmsBlack,x,y,-.525);
+  b.rotation.z=rot; return b;
+}
+chestBar(-.38,1.88,.07,.30);                    // I
+const qRing=mesh(tms,new THREE.TorusGeometry(.12,.045,8,18),tmsBlack,-.17,1.90,-.525);
+qRing.rotation.x=0;
+chestBar(-.09,1.79,.12,.045,-.55);              // Q tail
+mesh(tms,new THREE.SphereGeometry(.035,10,8),tmsBlack,.05,1.91,-.525); // :
+mesh(tms,new THREE.SphereGeometry(.035,10,8),tmsBlack,.05,1.79,-.525);
+chestBar(.18,1.88,.055,.30);                    // 1
+chestBar(.39,1.88,.07,.31);                     // B spine
+chestBar(.46,1.97,.15,.06);
+chestBar(.46,1.81,.15,.06);
+
+/* arms */
+const tmsLA=new THREE.Group(),tmsRA=new THREE.Group();
+tmsLA.position.set(-1.00,2.24,0); tmsRA.position.set(1.00,2.24,0);
+tms.add(tmsLA,tmsRA);
+const tmsArmL=mesh(tmsLA,new THREE.BoxGeometry(.28,1.10,.34),tmsGreen,0,-.43,0);
+const tmsArmR=mesh(tmsRA,new THREE.BoxGeometry(.28,1.10,.34),tmsGreen,0,-.43,0);
+tmsArmL.rotation.z=-.18; tmsArmR.rotation.z=.18;
+mesh(tmsLA,new THREE.SphereGeometry(.18,14,10),tmsGreen,-.10,-1.00,0);
+mesh(tmsRA,new THREE.SphereGeometry(.18,14,10),tmsGreen,.10,-1.00,0);
+
+/* legs and rounded feet */
+const tmsLL=new THREE.Group(),tmsRL=new THREE.Group();
+tmsLL.position.set(-.48,1.05,0); tmsRL.position.set(.48,1.05,0);
+tms.add(tmsLL,tmsRL);
+mesh(tmsLL,new THREE.BoxGeometry(.36,.82,.44),tmsGreen,0,-.36,0);
+mesh(tmsRL,new THREE.BoxGeometry(.36,.82,.44),tmsGreen,0,-.36,0);
+const tmsLF=mesh(tmsLL,new THREE.SphereGeometry(.31,18,14),tmsGreen,0,-.82,-.08);
+const tmsRF=mesh(tmsRL,new THREE.SphereGeometry(.31,18,14),tmsGreen,0,-.82,-.08);
+tmsLF.scale.set(1.15,.72,1.0); tmsRF.scale.set(1.15,.72,1.0);
+
+
+/* ---------- Eree (Robodex #011) ----------
+   Based directly on the user's Robodex artwork: a friendly brown tree
+   with a broad green leafy crown, black vertical eyes and a smile. */
+const ereeBrown=new THREE.MeshStandardMaterial({color:0x9b4300,roughness:.88});
+const ereeGreen=new THREE.MeshStandardMaterial({color:0x079817,roughness:.82});
+const ereeBlack=new THREE.MeshStandardMaterial({color:0x070707,roughness:.75});
+
+const eree=new THREE.Group();
+eree.position.set(0,0,2.4);
+eree.visible=false;
+scene.add(eree);
+
+/* trunk/body */
+const ereeBody=mesh(eree,new THREE.CylinderGeometry(.82,1.02,2.75,9),ereeBrown,0,1.75,0);
+ereeBody.scale.z=.62;
+
+/* pointed lower trunk/roots */
+for(const x of [-.62,0,.62]){
+  const root=mesh(eree,new THREE.ConeGeometry(.34,.78,7),ereeBrown,x,.35,0);
+  root.rotation.z = x<0 ? -.12 : x>0 ? .12 : 0;
+}
+
+/* crown: broad rounded green cloud like the Robodex drawing */
+const crown=new THREE.Group(); eree.add(crown);
+const crownTufts=[
+ [-.95,3.43,0,.72],[0,3.68,0,.82],[.95,3.45,0,.72],
+ [-.48,3.82,.02,.70],[.48,3.82,.02,.72],
+ [-1.18,3.72,.02,.52],[1.18,3.70,.02,.52]
+];
+for(const [x,y,z,r] of crownTufts){
+  const leaf=mesh(crown,new THREE.SphereGeometry(r,18,14),ereeGreen,x,y,z);
+  leaf.scale.z=.70;
+}
+
+/* face */
+mesh(eree,new THREE.BoxGeometry(.11,.38,.075),ereeBlack,-.24,2.75,-.535);
+mesh(eree,new THREE.BoxGeometry(.11,.38,.075),ereeBlack,.24,2.75,-.535);
+const ereeSmile=mesh(eree,new THREE.TorusGeometry(.32,.055,8,20,Math.PI),ereeBlack,0,2.42,-.54);
+ereeSmile.rotation.z=Math.PI;
+
+/* branch-like arms */
+const ereeLA=new THREE.Group(),ereeRA=new THREE.Group();
+ereeLA.position.set(-.82,2.15,0); ereeRA.position.set(.82,2.15,0);
+eree.add(ereeLA,ereeRA);
+const eal=mesh(ereeLA,new THREE.CylinderGeometry(.13,.18,1.12,8),ereeBrown,-.23,-.43,0);
+const ear=mesh(ereeRA,new THREE.CylinderGeometry(.13,.18,1.12,8),ereeBrown,.23,-.43,0);
+eal.rotation.z=-.42; ear.rotation.z=.42;
+
+/* root-legs for running animation */
+const ereeLL=new THREE.Group(),ereeRL=new THREE.Group();
+ereeLL.position.set(-.38,.62,0); ereeRL.position.set(.38,.62,0);
+eree.add(ereeLL,ereeRL);
+const ell=mesh(ereeLL,new THREE.CylinderGeometry(.18,.24,.78,8),ereeBrown,0,-.27,0);
+const erl=mesh(ereeRL,new THREE.CylinderGeometry(.18,.24,.78,8),ereeBrown,0,-.27,0);
+mesh(ereeLL,new THREE.SphereGeometry(.25,12,10),ereeBrown,-.05,-.68,-.05).scale.set(1.25,.65,1);
+mesh(ereeRL,new THREE.SphereGeometry(.25,12,10),ereeBrown,.05,-.68,-.05).scale.set(1.25,.65,1);
+
+
+/* ---------- EXTRA ROBODEX CHARACTERS ---------- */
+function roundedLimb(parent,mat,x,y,z,sx,sy,sz){
+  const m=mesh(parent,new THREE.CapsuleGeometry(.18,.55,5,10),mat,x,y,z);
+  m.scale.set(sx,sy,sz);
+  return m;
+}
+function addFaceBars(parent,y,z,eyeMat,smile=true,scale=1){
+  mesh(parent,new THREE.BoxGeometry(.09*scale,.30*scale,.07),eyeMat,-.18*scale,y,z);
+  mesh(parent,new THREE.BoxGeometry(.09*scale,.30*scale,.07),eyeMat,.18*scale,y,z);
+  if(smile){
+    const mid=mesh(parent,new THREE.BoxGeometry(.30*scale,.065*scale,.07),eyeMat,0,y-.32*scale,z);
+    const l=mesh(parent,new THREE.BoxGeometry(.16*scale,.06*scale,.07),eyeMat,-.20*scale,y-.25*scale,z);
+    const r=mesh(parent,new THREE.BoxGeometry(.16*scale,.06*scale,.07),eyeMat,.20*scale,y-.25*scale,z);
+    l.rotation.z=-.32;r.rotation.z=.32;
+  }
+}
+function makeRunnerParts(group){
+  group.userData.anim={arms:[],legs:[],extras:[]};
+  return group.userData.anim;
+}
+
+/* Borilla #009 */
+const borOrange=new THREE.MeshStandardMaterial({color:0xf47b20,roughness:.72});
+const borYellow=new THREE.MeshStandardMaterial({color:0xffe843,roughness:.62});
+const borBlack=new THREE.MeshStandardMaterial({color:0x070707,roughness:.75});
+const borilla=new THREE.Group();borilla.position.set(0,0,2.4);borilla.visible=false;scene.add(borilla);
+const borA=makeRunnerParts(borilla);
+const borBody=mesh(borilla,new THREE.SphereGeometry(.77,20,16),borOrange,0,1.82,0);borBody.scale.set(.95,1.22,.78);
+const borBelly=mesh(borilla,new THREE.SphereGeometry(.39,16,12),borYellow,0,1.86,-.64);borBelly.scale.y=1.35;
+const borHead=mesh(borilla,new THREE.SphereGeometry(.72,20,16),borOrange,0,3.15,0);
+const borFace=mesh(borilla,new THREE.SphereGeometry(.49,18,14),borYellow,0,3.14,-.46);borFace.scale.z=.45;
+addFaceBars(borilla,3.20,-.75,borBlack,true,.75);
+const borLA=new THREE.Group(),borRA=new THREE.Group();borLA.position.set(-.78,2.25,0);borRA.position.set(.78,2.25,0);borilla.add(borLA,borRA);borA.arms.push(borLA,borRA);
+roundedLimb(borLA,borOrange,0,-.42,0,1.1,1.15,1);roundedLimb(borRA,borOrange,0,-.42,0,1.1,1.15,1);
+mesh(borLA,new THREE.SphereGeometry(.22,12,10),borYellow,0,-.95,0);mesh(borRA,new THREE.SphereGeometry(.22,12,10),borYellow,0,-.95,0);
+const borLL=new THREE.Group(),borRL=new THREE.Group();borLL.position.set(-.36,1.03,0);borRL.position.set(.36,1.03,0);borilla.add(borLL,borRL);borA.legs.push(borLL,borRL);
+roundedLimb(borLL,borOrange,0,-.38,0,1,1,1);roundedLimb(borRL,borOrange,0,-.38,0,1,1,1);
+mesh(borLL,new THREE.TorusGeometry(.23,.08,10,20),borYellow,0,-.82,-.05).rotation.x=Math.PI/2;
+mesh(borRL,new THREE.TorusGeometry(.23,.08,10,20),borYellow,0,-.82,-.05).rotation.x=Math.PI/2;
+
+/* Sapling #010 */
+const sapGreen=new THREE.MeshStandardMaterial({color:0x72ff38,roughness:.72});
+const sapBlack=new THREE.MeshStandardMaterial({color:0x050505,roughness:.75});
+const sapling=new THREE.Group();sapling.position.set(0,0,2.4);sapling.visible=false;scene.add(sapling);
+const sapA=makeRunnerParts(sapling);
+const sapStem=mesh(sapling,new THREE.CapsuleGeometry(.34,1.45,6,12),sapGreen,0,1.75,0);sapStem.scale.set(.8,1.15,.72);
+addFaceBars(sapling,2.12,-.36,sapBlack,true,.65);
+const leaf1=mesh(sapling,new THREE.SphereGeometry(.70,16,12),sapGreen,-.45,3.25,0);leaf1.scale.set(1.4,.55,.65);leaf1.rotation.z=.25;
+const leaf2=mesh(sapling,new THREE.SphereGeometry(.70,16,12),sapGreen,.45,3.25,0);leaf2.scale.set(1.4,.55,.65);leaf2.rotation.z=-.25;
+sapA.extras.push(leaf1,leaf2);
+
+/* Watcheree #012 */
+const watchBrown=new THREE.MeshStandardMaterial({color:0x8f3e08,roughness:.86});
+const watchGreen=new THREE.MeshStandardMaterial({color:0x428f2e,roughness:.82});
+const watchBlack=new THREE.MeshStandardMaterial({color:0x080808,roughness:.75});
+const watchWhite=new THREE.MeshStandardMaterial({color:0xf4f4f4,roughness:.75});
+const watchRed=new THREE.MeshStandardMaterial({color:0xe5392d,roughness:.68});
+const watcheree=new THREE.Group();watcheree.position.set(0,0,2.4);watcheree.visible=false;scene.add(watcheree);
+const watA=makeRunnerParts(watcheree);
+const watBody=mesh(watcheree,new THREE.CylinderGeometry(.85,1.05,2.65,8),watchBrown,0,1.65,0);watBody.scale.z=.65;
+for(const x of [-.7,0,.7])mesh(watcheree,new THREE.ConeGeometry(.28,.65,6),watchBrown,x,.35,0);
+const watCrown=mesh(watcheree,new THREE.SphereGeometry(1.25,18,14),watchGreen,0,3.45,0);watCrown.scale.set(1.35,.65,.65);watA.extras.push(watCrown);
+mesh(watcheree,new THREE.BoxGeometry(.12,.42,.07),watchBlack,-.35,2.55,-.56).rotation.z=-.25;
+mesh(watcheree,new THREE.BoxGeometry(.12,.42,.07),watchBlack,.35,2.55,-.56);
+const mouth=mesh(watcheree,new THREE.BoxGeometry(.55,.30,.08),watchBlack,0,2.15,-.57);
+for(let x=-.20;x<=.20;x+=.13){const tooth=mesh(watcheree,new THREE.ConeGeometry(.06,.13,4),watchWhite,x,2.15,-.63);tooth.rotation.z=Math.PI;}
+const watLA=new THREE.Group(),watRA=new THREE.Group();watLA.position.set(-.92,2.1,0);watRA.position.set(.92,2.1,0);watcheree.add(watLA,watRA);watA.arms.push(watLA,watRA);
+roundedLimb(watLA,watchBrown,0,-.43,0,1,1.1,1);roundedLimb(watRA,watchBrown,0,-.43,0,1,1.1,1);
+
+/* Fire Eree #013 */
+const fireDark=new THREE.MeshStandardMaterial({color:0x25100a,roughness:.9});
+const fireBrown=new THREE.MeshStandardMaterial({color:0x8f4217,roughness:.85});
+const fireRed=new THREE.MeshStandardMaterial({color:0xe23b2e,emissive:0x4b0905,emissiveIntensity:.35,roughness:.6});
+const fireOrange=new THREE.MeshStandardMaterial({color:0xff6e1e,emissive:0x6b2000,emissiveIntensity:.5,roughness:.5});
+const fireEree=new THREE.Group();fireEree.position.set(0,0,2.4);fireEree.visible=false;scene.add(fireEree);
+const fireA=makeRunnerParts(fireEree);
+const fireBody=mesh(fireEree,new THREE.CylinderGeometry(.80,1.0,2.5,8),fireDark,0,1.55,0);fireBody.scale.z=.64;
+const fireCrown=mesh(fireEree,new THREE.SphereGeometry(1.12,18,14),fireBrown,0,3.38,0);fireCrown.scale.set(1.35,.62,.65);fireA.extras.push(fireCrown);
+mesh(fireEree,new THREE.SphereGeometry(.22,14,10),fireRed,-.34,2.62,-.61).scale.set(.85,1.2,.4);
+mesh(fireEree,new THREE.SphereGeometry(.22,14,10),fireRed,.34,2.62,-.61).scale.set(.85,1.2,.4);
+mesh(fireEree,new THREE.SphereGeometry(.24,14,10),fireRed,0,2.15,-.62).scale.set(1.2,.65,.4);
+const fLA=new THREE.Group(),fRA=new THREE.Group();fLA.position.set(-.9,2.05,0);fRA.position.set(.9,2.05,0);fireEree.add(fLA,fRA);fireA.arms.push(fLA,fRA);
+roundedLimb(fLA,fireOrange,0,-.45,0,1.2,1.2,1);roundedLimb(fRA,fireOrange,0,-.45,0,1.2,1.2,1);
+
+/* Serpently #015 */
+const serpPink=new THREE.MeshStandardMaterial({color:0xe63bb8,roughness:.62});
+const serpPurple=new THREE.MeshStandardMaterial({color:0x8a12ef,roughness:.58});
+const serpBlack=new THREE.MeshStandardMaterial({color:0x070707,roughness:.72});
+const serpently=new THREE.Group();serpently.position.set(0,0,2.4);serpently.visible=false;scene.add(serpently);
+const serpA=makeRunnerParts(serpently);
+const serpBody=new THREE.Group();serpently.add(serpBody);serpA.extras.push(serpBody);
+for(let i=0;i<7;i++){
+  const seg=mesh(serpBody,new THREE.SphereGeometry(.48-i*.025,16,12),i<3?serpPurple:serpPink,0,1.0+i*.38,0);
+  seg.position.x=Math.sin(i*.75)*.35;
+}
+const serpHead=mesh(serpently,new THREE.SphereGeometry(.62,18,14),serpPink,.25,3.65,0);serpHead.scale.set(1.15,.78,.8);
+mesh(serpently,new THREE.BoxGeometry(.10,.25,.07),serpBlack,.05,3.72,-.55);
+mesh(serpently,new THREE.BoxGeometry(.10,.25,.07),serpBlack,.38,3.72,-.55);
+
+/* Scientist #016 */
+const sciGrey=new THREE.MeshStandardMaterial({color:0x8e8e8e,roughness:.72});
+const sciWhite=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.75});
+const sciBlack=new THREE.MeshStandardMaterial({color:0x050505,roughness:.75});
+const scientist=new THREE.Group();scientist.position.set(0,0,2.4);scientist.visible=false;scene.add(scientist);
+const sciA=makeRunnerParts(scientist);
+const sciBody=mesh(scientist,new THREE.CapsuleGeometry(.58,1.35,6,12),sciGrey,0,1.75,0);
+const sciHead=mesh(scientist,new THREE.BoxGeometry(1.15,1.15,.75),sciGrey,0,3.15,0);
+addFaceBars(scientist,3.20,-.40,sciBlack,true,.9);
+for(const side of [-1,1]){
+  mesh(scientist,new THREE.SphereGeometry(.27,14,10),sciWhite,side*.64,3.65,0);
+  mesh(scientist,new THREE.SphereGeometry(.20,14,10),sciWhite,side*.80,3.58,0);
+}
+const sciLA=new THREE.Group(),sciRA=new THREE.Group();sciLA.position.set(-.72,2.3,0);sciRA.position.set(.72,2.3,0);scientist.add(sciLA,sciRA);sciA.arms.push(sciLA,sciRA);
+roundedLimb(sciLA,sciGrey,0,-.45,0,1,1.2,1);roundedLimb(sciRA,sciGrey,0,-.45,0,1,1.2,1);
+const sciLL=new THREE.Group(),sciRL=new THREE.Group();sciLL.position.set(-.34,.95,0);sciRL.position.set(.34,.95,0);scientist.add(sciLL,sciRL);sciA.legs.push(sciLL,sciRL);
+roundedLimb(sciLL,sciGrey,0,-.38,0,1,1.2,1);roundedLimb(sciRL,sciGrey,0,-.38,0,1,1.2,1);
+
+/* ---------- RITTY FAMILY — ROBODEX-STYLE REBUILD ---------- */
+const catGrey=new THREE.MeshStandardMaterial({color:0xa5a5a5,roughness:.72});
+const catPink=new THREE.MeshStandardMaterial({color:0xf23aa6,roughness:.60});
+const catRed=new THREE.MeshStandardMaterial({color:0xe93a31,roughness:.62});
+const catBlack=new THREE.MeshStandardMaterial({color:0x050505,roughness:.75});
+const catYellow=new THREE.MeshStandardMaterial({color:0xffd536,roughness:.62});
+
+function addSimpleCatFace(parent,cx,cy,z,happy=false,angry=false){
+  if(happy){
+    const l=mesh(parent,new THREE.BoxGeometry(.22,.06,.06),catBlack,cx-.19,cy,z);
+    const r=mesh(parent,new THREE.BoxGeometry(.22,.06,.06),catBlack,cx+.19,cy,z);
+    l.rotation.z=.35; r.rotation.z=-.35;
+  }else if(angry){
+    const l=mesh(parent,new THREE.BoxGeometry(.23,.06,.06),catBlack,cx-.19,cy,z);
+    const r=mesh(parent,new THREE.BoxGeometry(.23,.06,.06),catBlack,cx+.19,cy,z);
+    l.rotation.z=-.45; r.rotation.z=.45;
+  }else{
+    mesh(parent,new THREE.BoxGeometry(.07,.27,.06),catBlack,cx-.19,cy,z);
+    mesh(parent,new THREE.BoxGeometry(.07,.27,.06),catBlack,cx+.19,cy,z);
+  }
+  mesh(parent,new THREE.SphereGeometry(.09,10,8),catPink,cx,cy-.20,z-.01);
+}
+
+function addSimpleCatEars(parent,cx,cy,z,scale=1){
+  for(const sx of [-1,1]){
+    const ear=mesh(parent,new THREE.ConeGeometry(.22*scale,.42*scale,4),catGrey,cx+sx*.31*scale,cy,z);
+    ear.rotation.z=sx*.10;
+    const inner=mesh(parent,new THREE.ConeGeometry(.10*scale,.22*scale,4),catPink,cx+sx*.31*scale,cy+.01,z-.18);
+    inner.rotation.z=sx*.10;
+  }
+}
+
+function addTailBand(parent,x,y,z){
+  mesh(parent,new THREE.BoxGeometry(.28,.20,.28),catYellow,x,y,z);
+  mesh(parent,new THREE.SphereGeometry(.055,8,6),catRed,x,y,z-.16);
+}
+
+/* Ritty #018 — upright/slim with two chest spots, side spot and long tail */
+const ritty=new THREE.Group();ritty.position.set(0,0,2.4);ritty.visible=false;scene.add(ritty);
+const ritA=makeRunnerParts(ritty);
+const ritBody=mesh(ritty,new THREE.CapsuleGeometry(.44,1.20,6,12),catGrey,0,1.72,0);
+ritBody.scale.set(.82,1.05,.76);
+mesh(ritty,new THREE.BoxGeometry(.96,.90,.68),catGrey,0,3.05,0);
+addSimpleCatEars(ritty,0,3.60,0,1);
+addSimpleCatFace(ritty,0,3.10,-.36,false,false);
+mesh(ritty,new THREE.SphereGeometry(.13,10,8),catRed,-.20,2.12,-.46);
+mesh(ritty,new THREE.SphereGeometry(.13,10,8),catRed,.22,2.08,-.46);
+mesh(ritty,new THREE.SphereGeometry(.17,10,8),catRed,.43,1.50,-.38);
+
+const ritLA=new THREE.Group(),ritRA=new THREE.Group();
+ritLA.position.set(-.34,1.98,0);ritRA.position.set(.34,1.98,0);ritty.add(ritLA,ritRA);ritA.arms.push(ritLA,ritRA);
+roundedLimb(ritLA,catGrey,0,-.44,0,.75,1.1,.8);roundedLimb(ritRA,catGrey,0,-.44,0,.75,1.1,.8);
+const ritLL=new THREE.Group(),ritRL=new THREE.Group();
+ritLL.position.set(-.27,.98,0);ritRL.position.set(.27,.98,0);ritty.add(ritLL,ritRL);ritA.legs.push(ritLL,ritRL);
+roundedLimb(ritLL,catGrey,0,-.38,0,.8,1.0,.82);roundedLimb(ritRL,catGrey,0,-.38,0,.8,1.0,.82);
+
+const ritTail=new THREE.Group();ritTail.position.set(.45,1.35,0);ritty.add(ritTail);ritA.extras.push(ritTail);
+const rt1=mesh(ritTail,new THREE.CapsuleGeometry(.12,.70,5,10),catGrey,.35,.05,0);rt1.rotation.z=-1.0;
+const rt2=mesh(ritTail,new THREE.CapsuleGeometry(.12,.55,5,10),catGrey,.77,.28,0);rt2.rotation.z=-.30;
+addTailBand(ritTail,.96,.47,0);
+
+/* Riark #019 — long arched body, angry face, four red spots */
+const riark=new THREE.Group();riark.position.set(0,0,2.4);riark.visible=false;scene.add(riark);
+const riaA=makeRunnerParts(riark);
+
+const riarkBody=new THREE.Group();riark.add(riarkBody);riaA.extras.push(riarkBody);
+const arch=[
+  [-.55,1.65],[-.20,2.02],[.20,2.28],[.62,2.35],[1.02,2.20],[1.32,1.85]
+];
+for(const [x,y] of arch){
+  const seg=mesh(riarkBody,new THREE.SphereGeometry(.46,14,10),catGrey,x,y,0);
+  seg.scale.set(1.05,.88,.74);
+}
+mesh(riark,new THREE.BoxGeometry(.90,.88,.68),catGrey,-.95,1.85,0);
+addSimpleCatEars(riark,-.95,2.39,0,.82);
+addSimpleCatFace(riark,-.95,1.91,-.36,false,true);
+for(const [x,y] of [[-.18,2.15],[.28,2.39],[.76,2.32],[1.14,2.05]]){
+  mesh(riark,new THREE.SphereGeometry(.13,10,8),catRed,x,y,-.40);
+}
+const riaLegs=[];
+for(const [x,y] of [[-.42,1.45],[.05,1.38],[.75,1.35],[1.18,1.48]]){
+  const g=new THREE.Group();g.position.set(x,y,0);riark.add(g);riaLegs.push(g);
+  roundedLimb(g,catGrey,0,-.33,0,.72,.95,.8);
+}
+riaA.legs.push(...riaLegs);
+
+const riaTail=new THREE.Group();riaTail.position.set(1.30,1.80,0);riark.add(riaTail);riaA.extras.push(riaTail);
+const ra1=mesh(riaTail,new THREE.CapsuleGeometry(.13,.72,5,10),catGrey,.25,.35,0);ra1.rotation.z=-.38;
+const ra2=mesh(riaTail,new THREE.CapsuleGeometry(.13,.52,5,10),catGrey,.36,.82,0);ra2.rotation.z=.08;
+addTailBand(riaTail,.39,1.12,0);
+
+/* Right #020 — rounded/happy body, three red spots, short legs */
+const right=new THREE.Group();right.position.set(0,0,2.4);right.visible=false;scene.add(right);
+const rigA=makeRunnerParts(right);
+const rigBody=mesh(right,new THREE.SphereGeometry(.88,18,14),catGrey,.30,1.64,0);
+rigBody.scale.set(1.45,.90,.76);
+mesh(right,new THREE.BoxGeometry(.92,.88,.68),catGrey,-.62,2.34,0);
+addSimpleCatEars(right,-.62,2.88,0,.85);
+addSimpleCatFace(right,-.62,2.39,-.36,true,false);
+for(const [x,y] of [[-.02,1.82],[.50,1.66],[.92,1.54]]){
+  const spot=mesh(right,new THREE.SphereGeometry(.16,10,8),catRed,x,y,-.64);
+  spot.scale.set(.90,1.15,.45);
+}
+const rigLegs=[];
+for(const [x,y] of [[-.42,1.10],[.05,1.02],[.65,1.00],[1.02,1.07]]){
+  const g=new THREE.Group();g.position.set(x,y,0);right.add(g);rigLegs.push(g);
+  roundedLimb(g,catGrey,0,-.28,0,.70,.86,.78);
+}
+rigA.legs.push(...rigLegs);
+const rigTail=new THREE.Group();rigTail.position.set(1.08,1.58,0);right.add(rigTail);rigA.extras.push(rigTail);
+const rr=mesh(rigTail,new THREE.CapsuleGeometry(.13,.72,5,10),catGrey,.18,.40,0);rr.rotation.z=.04;
+addTailBand(rigTail,.20,.82,0);
+
+/* ---------- Supabase account front end ---------- */
+let currentUser=null;
+let currentUserId=null;
+let guestMode=false;
+
+function normalizeUsername(u){return u.trim().toLowerCase();}
+function usernameToInternalEmail(username){
+  const bytes=new TextEncoder().encode(normalizeUsername(username));
+  const safe=Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return 'u_'+safe+'@robodash.invalid';
+}
+function validPassword(p){
+  return p.length>=8 &&
+    /[A-Z]/.test(p) &&
+    /[a-z]/.test(p) &&
+    /[^A-Za-z0-9\s]/.test(p) &&
+    !/\s/.test(p);
+}
+function validUsername(u){return /^[A-Za-z0-9_.-]{3,24}$/.test(u);}
+
+function hideAuthSections(){
+  document.getElementById('authHome').style.display='none';
+  document.getElementById('signInForm').style.display='none';
+  document.getElementById('signUpForm').style.display='none';
+  document.getElementById('guestDisclaimer').style.display='none';
+}
+function showAuthHome(){
+  hideAuthSections();
+  document.getElementById('authHome').style.display='block';
+  document.getElementById('authTitle').textContent='Welcome';
+}
+
+async function fetchMyProfile(){
+  for(let i=0;i<4;i++){
+    const {data,error}=await supabase
+      .from('profiles')
+      .select('id,username,high_score,highest_adventure_level,selected_character')
+      .single();
+    if(!error && data)return data;
+    if(i<3)await new Promise(r=>setTimeout(r,250*(i+1)));
+  }
+  return null;
+}
+
+async function enterGameAsAccount(profile){
+  currentUser=profile.username;
+  currentUserId=profile.id;
+  guestMode=false;
+  highestUnlockedLevel=Math.max(1,Number(profile.highest_adventure_level||1));
+  highScore=Math.max(0,Number(profile.high_score||0));
+
+  if(profile.selected_character && ['Billy','Bob','Lily','TMS','Eree','Borilla','Sapling','Watcheree','Fire Eree','Serpently','Scientist','Ritty','Riark','Right'].includes(profile.selected_character)){
+    selectCharacter(profile.selected_character,false);
+  }
+
+  document.getElementById('high').textContent='High Score: '+highScore;
+  document.getElementById('authOverlay').style.display='none';
+  document.getElementById('startOverlay').style.display='flex';
+  document.getElementById('accountBadge').textContent='Signed in: '+profile.username;
+  document.getElementById('accountActions').style.display='flex';
+}
+
+async function enterGameAsGuest(){
+  await supabase.auth.signOut();
+  currentUser=null;
+  currentUserId=null;
+  guestMode=true;
+  highestUnlockedLevel=1;
+  highScore=0;
+  selectCharacter('Billy',false);
+
+  document.getElementById('high').textContent='High Score: 0';
+  document.getElementById('authOverlay').style.display='none';
+  document.getElementById('startOverlay').style.display='flex';
+  document.getElementById('accountBadge').textContent='Guest Mode';
+  document.getElementById('accountActions').style.display='none';
+}
+
+document.getElementById('showSignIn').onclick=()=>{
+  hideAuthSections();
+  document.getElementById('signInForm').style.display='block';
+  document.getElementById('authTitle').textContent='Sign In';
+  document.getElementById('signInError').textContent='';
+};
+document.getElementById('showSignUp').onclick=()=>{
+  hideAuthSections();
+  document.getElementById('signUpForm').style.display='block';
+  document.getElementById('authTitle').textContent='Create Account';
+  document.getElementById('signUpError').textContent='';
+};
+document.getElementById('showGuest').onclick=()=>{
+  hideAuthSections();
+  document.getElementById('guestDisclaimer').style.display='block';
+  document.getElementById('authTitle').textContent='Guest Mode';
+};
+
+document.getElementById('signInBack').onclick=showAuthHome;
+document.getElementById('signUpBack').onclick=showAuthHome;
+document.getElementById('guestBack').onclick=showAuthHome;
+document.getElementById('guestContinue').onclick=enterGameAsGuest;
+
+document.getElementById('signUpSubmit').onclick=async()=>{
+  const username=document.getElementById('signUpUsername').value.trim();
+  const password=document.getElementById('signUpPassword').value;
+  const confirm=document.getElementById('signUpConfirm').value;
+  const err=document.getElementById('signUpError');
+  const btn=document.getElementById('signUpSubmit');
+
+  err.textContent='';
+  if(!validUsername(username)){
+    err.textContent='Username must be 3–24 characters and use only letters, numbers, _, . or -.';
+    return;
+  }
+  if(!validPassword(password)){
+    err.textContent='Password must be at least 8 characters and include uppercase, lowercase and a special character, with no spaces.';
+    return;
+  }
+  if(password!==confirm){
+    err.textContent='Passwords do not match.';
+    return;
+  }
+
+  btn.disabled=true;
+  btn.textContent='CREATING...';
+
+  try{
+    const {data,error}=await supabase.auth.signUp({
+      email:usernameToInternalEmail(username),
+      password,
+      options:{data:{username}}
+    });
+
+    if(error){
+      const msg=(error.message||'').toLowerCase();
+      if(msg.includes('already')||msg.includes('registered')||msg.includes('database error')||msg.includes('duplicate')){
+        err.textContent='Username already taken.';
+      }else{
+        err.textContent='Could not create account: '+error.message;
+      }
+      return;
+    }
+
+    if(!data?.session){
+      err.textContent='Account created. Please use Sign In.';
+      return;
+    }
+
+    const profile=await fetchMyProfile();
+    if(!profile){
+      err.textContent='Account created, but the player profile could not be loaded. Please try signing in.';
+      return;
+    }
+
+    await enterGameAsAccount(profile);
+  }catch(e){
+    err.textContent='Could not connect to the RoboDash account server. Please try again.';
+  }finally{
+    btn.disabled=false;
+    btn.textContent='CREATE ACCOUNT';
+  }
+};
+
+document.getElementById('signInSubmit').onclick=async()=>{
+  const username=document.getElementById('signInUsername').value.trim();
+  const password=document.getElementById('signInPassword').value;
+  const err=document.getElementById('signInError');
+  const btn=document.getElementById('signInSubmit');
+
+  err.textContent='';
+  if(!validUsername(username)){
+    err.textContent='Enter a valid username.';
+    return;
+  }
+  if(!password){
+    err.textContent='Enter your password.';
+    return;
+  }
+
+  btn.disabled=true;
+  btn.textContent='SIGNING IN...';
+
+  try{
+    const {data,error}=await supabase.auth.signInWithPassword({
+      email:usernameToInternalEmail(username),
+      password
+    });
+
+    if(error||!data?.session){
+      err.textContent='Incorrect username or password.';
+      return;
+    }
+
+    const profile=await fetchMyProfile();
+    if(!profile){
+      err.textContent='Signed in, but your RoboDash profile could not be loaded.';
+      return;
+    }
+
+    await enterGameAsAccount(profile);
+  }catch(e){
+    err.textContent='Could not connect to the RoboDash account server. Please try again.';
+  }finally{
+    btn.disabled=false;
+    btn.textContent='SIGN IN';
+  }
+};
+
+async function loadPlayerProgress(){
+  if(!currentUserId||guestMode)return;
+  const profile=await fetchMyProfile();
+  if(!profile)return;
+
+  highestUnlockedLevel=Math.max(1,Number(profile.highest_adventure_level||1));
+  highScore=Math.max(0,Number(profile.high_score||0));
+  if(profile.selected_character&&['Billy','Bob','Lily','TMS','Eree','Borilla','Sapling','Watcheree','Fire Eree','Serpently','Scientist','Ritty','Riark','Right'].includes(profile.selected_character)){
+    selectCharacter(profile.selected_character,false);
+  }
+  document.getElementById('high').textContent='High Score: '+highScore;
+}
+
+async function savePlayerProgress(){
+  if(!currentUserId||guestMode)return;
+
+  const {error}=await supabase
+    .from('profiles')
+    .update({
+      high_score:Math.max(0,Math.floor(highScore||0)),
+      highest_adventure_level:Math.max(1,Math.floor(highestUnlockedLevel||1)),
+      selected_character:activeName,
+      updated_at:new Date().toISOString()
+    })
+    .eq('id',currentUserId);
+
+  if(error)console.warn('RoboDash progress save failed:',error.message);
+}
+
+async function restoreAccountSession(){
+  showAuthHome();
+  try{
+    const {data:{session}}=await supabase.auth.getSession();
+    if(!session)return;
+
+    currentUserId=session.user.id;
+    const profile=await fetchMyProfile();
+    if(profile){
+      await enterGameAsAccount(profile);
+    }else{
+      await supabase.auth.signOut();
+      showAuthHome();
+    }
+  }catch(e){
+    showAuthHome();
+  }
+}
+restoreAccountSession();
+
+
+/* ---------- game state ---------- */
+const characters={Billy:billy,Bob:bob,Lily:lily,TMS:tms,Eree:eree,Borilla:borilla,Sapling:sapling,Watcheree:watcheree,['Fire Eree']:fireEree,Serpently:serpently,Scientist:scientist,Ritty:ritty,Riark:riark,Right:right};
+/* Ghost-mode eyes: two small 3D Robodex-style eye bars.
+   They sit on the FRONT of the runner but remain visible through the transparent model. */
+const ghostEyes = new THREE.Group();
+scene.add(ghostEyes);
+ghostEyes.visible = false;
+const eyeMat = new THREE.MeshStandardMaterial({color:0x111111,roughness:.5});
+const eyeL = new THREE.Mesh(new THREE.BoxGeometry(.10,.34,.08),eyeMat);
+const eyeR = eyeL.clone();
+eyeL.position.x=-.18; eyeR.position.x=.18;
+ghostEyes.add(eyeL,eyeR);
+
+function ghostEyeOffset(){
+  if(activeName==='Bob') return {y:3.12,z:-.83};
+  if(activeName==='Lily') return {y:2.95,z:-.78};
+  if(activeName==='TMS') return {y:3.18,z:-.43};
+  if(activeName==='Eree') return {y:2.75,z:-.56};
+  if(activeName==='Borilla') return {y:3.20,z:-.76};
+  if(activeName==='Sapling') return {y:2.12,z:-.37};
+  if(activeName==='Watcheree') return {y:2.55,z:-.57};
+  if(activeName==='Fire Eree') return {y:2.62,z:-.62};
+  if(activeName==='Serpently') return {y:3.72,z:-.56};
+  if(activeName==='Scientist') return {y:3.20,z:-.41};
+  if(activeName==='Ritty') return {y:3.02,z:-.40};
+  if(activeName==='Riark') return {y:1.88,z:-.40};
+  if(activeName==='Right') return {y:1.88,z:-.40};
+  return {y:3.48,z:-.43};
+}
+
+function setRunnerGhost(on){
+  const runner=currentRunner();
+  runner.traverse(obj=>{
+    if(obj.isMesh){
+      if(!obj.userData.originalMaterial) obj.userData.originalMaterial=obj.material;
+      if(on){
+        const base=obj.userData.originalMaterial;
+        const ghostMat=base.clone();
+        ghostMat.transparent=true;
+        ghostMat.opacity=.18;
+        ghostMat.depthWrite=false;
+        obj.material=ghostMat;
+      }else if(obj.userData.originalMaterial){
+        obj.material=obj.userData.originalMaterial;
+      }
+    }
+  });
+  ghostEyes.visible=on;
+}
+
+let activeName='Billy';
+let pendingCharacter='Billy';
+let pendingMode=null;
+let gameMode=null;
+let currentAdventureLevel=1;
+const TOTAL_ADVENTURE_LEVELS=12;
+const ADVENTURE_LEVEL_XP=500;
+let highestUnlockedLevel=1;
+let lane=1,targetX=0;
+const lanes=[-2.5,0,2.5];
+let yVel=0,grounded=true;
+let crouching=false,crouchTimer=0;
+let running=false,gameOver=false,settingsOpen=false;
+let score=0,level=1,speed=13,spawnTimer=.9,powerSpawnTimer=7.0,goldenSpawnTimer=28+Math.random()*22,xpSpawnTimer=.8,fistSpawnTimer=5.5,elapsed=0;
+let jumpBoostTimer=0,fastTimer=0,slowTimer=0,ghostTimer=0,invincibleTimer=0;
+let babyMode=false;
+let highScore=0;
+const obstacles=[];
+
+function currentRunner(){ return characters[activeName]; }
+
+function selectCharacter(name,save=true){
+  activeName=name;
+  for(const [key,obj] of Object.entries(characters)) obj.visible = key===name;
+
+  document.getElementById('billyBtn').classList.toggle('active',name==='Billy');
+  document.getElementById('bobBtn').classList.toggle('active',name==='Bob');
+  document.getElementById('lilyBtn').classList.toggle('active',name==='Lily');
+  document.getElementById('tmsBtn').classList.toggle('active',name==='TMS');
+  document.getElementById('ereeBtn').classList.toggle('active',name==='Eree');document.getElementById('borillaBtn').classList.toggle('active',name==='Borilla');
+  document.getElementById('saplingBtn').classList.toggle('active',name==='Sapling');
+  document.getElementById('watchereeBtn').classList.toggle('active',name==='Watcheree');
+  document.getElementById('fireEreeBtn').classList.toggle('active',name==='Fire Eree');
+  document.getElementById('serpentlyBtn').classList.toggle('active',name==='Serpently');
+  document.getElementById('scientistBtn').classList.toggle('active',name==='Scientist');
+  document.getElementById('rittyBtn').classList.toggle('active',name==='Ritty');
+  document.getElementById('riarkBtn').classList.toggle('active',name==='Riark');
+  document.getElementById('rightBtn').classList.toggle('active',name==='Right');
+
+  for(const obj of Object.values(characters)){
+    obj.traverse(m=>{
+      if(m.isMesh && m.userData.originalMaterial)m.material=m.userData.originalMaterial;
+    });
+  }
+  const r=currentRunner();
+  r.position.x=targetX;
+  r.position.y=0;
+  r.position.z=2.4;
+  yVel=0;
+  grounded=true;
+  if(ghostTimer>0)setRunnerGhost(true);
+  if(save)savePlayerProgress();
+}
+
+function setCharacterButtonsLocked(locked){
+  for(const id of ['billyBtn','bobBtn','lilyBtn','tmsBtn','ereeBtn','borillaBtn','saplingBtn','watchereeBtn','fireEreeBtn','serpentlyBtn','scientistBtn','rittyBtn','riarkBtn','rightBtn']){
+    const btn=document.getElementById(id);
+    if(btn)btn.classList.toggle('gameLocked',locked);
+  }
+}
+
+document.getElementById('billyBtn').onclick=()=>{if(!running)selectCharacter('Billy');};
+document.getElementById('bobBtn').onclick=()=>{if(!running)selectCharacter('Bob');};
+document.getElementById('lilyBtn').onclick=()=>{if(!running)selectCharacter('Lily');};
+document.getElementById('tmsBtn').onclick=()=>{if(!running)selectCharacter('TMS');};
+document.getElementById('ereeBtn').onclick=()=>{if(!running)selectCharacter('Eree');};
+document.getElementById('borillaBtn').onclick=()=>{if(!running)selectCharacter('Borilla');};
+document.getElementById('saplingBtn').onclick=()=>{if(!running)selectCharacter('Sapling');};
+document.getElementById('watchereeBtn').onclick=()=>{if(!running)selectCharacter('Watcheree');};
+document.getElementById('fireEreeBtn').onclick=()=>{if(!running)selectCharacter('Fire Eree');};
+document.getElementById('serpentlyBtn').onclick=()=>{if(!running)selectCharacter('Serpently');};
+document.getElementById('scientistBtn').onclick=()=>{if(!running)selectCharacter('Scientist');};
+document.getElementById('rittyBtn').onclick=()=>{if(!running)selectCharacter('Ritty');};
+document.getElementById('riarkBtn').onclick=()=>{if(!running)selectCharacter('Riark');};
+document.getElementById('rightBtn').onclick=()=>{if(!running)selectCharacter('Right');};
+
+/* ---------- obstacle ---------- */
+const wood=new THREE.MeshStandardMaterial({color:0x9b7549,roughness:.8});
+const stone=new THREE.MeshStandardMaterial({color:0x777777,roughness:.8});
+const powerups=[];
+const xpOrbs=[];
+const xpOrbMat=new THREE.MeshStandardMaterial({
+  color:0xffffff,
+  emissive:0xffffff,
+  emissiveIntensity:.35,
+  roughness:.25
+});
+function spawnXPOrb(){
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.22,16,12),xpOrbMat);
+  orb.position.set(lanes[Math.floor(Math.random()*3)],.9,-58);
+  orb.castShadow=true;
+  scene.add(orb);
+  xpOrbs.push(orb);
+}
+
+const goldenMat=new THREE.MeshStandardMaterial({
+  color:0xffc928,
+  emissive:0xff9d00,
+  emissiveIntensity:.9,
+  metalness:.55,
+  roughness:.22
+});
+function spawnGoldenOrb(){
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.43,22,16),goldenMat);
+  orb.userData.type='invincible';
+  orb.userData.golden=true;
+  orb.position.set(lanes[Math.floor(Math.random()*3)],1.08,-64);
+  orb.castShadow=true;
+  scene.add(orb);
+  powerups.push(orb);
+}
+
+const powerMats={
+  jump:new THREE.MeshStandardMaterial({color:0x25d64c,emissive:0x0b5519,emissiveIntensity:.55,roughness:.35}),
+  fast:new THREE.MeshStandardMaterial({color:0x2497ff,emissive:0x0b365b,emissiveIntensity:.55,roughness:.35}),
+  slow:new THREE.MeshStandardMaterial({color:0x555b60,emissive:0x16191b,emissiveIntensity:.35,roughness:.45}),
+  ghost:new THREE.MeshStandardMaterial({color:0xb88cff,emissive:0x412867,emissiveIntensity:.5,roughness:.35})
+};
+function spawnPowerup(){
+  const types=['jump','fast','slow','ghost'];
+  const type=types[Math.floor(Math.random()*types.length)];
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.36,18,14),powerMats[type]);
+  orb.userData.type=type;
+  orb.position.set(lanes[Math.floor(Math.random()*3)],1.05,-60);
+  orb.castShadow=true;
+  scene.add(orb);
+  powerups.push(orb);
+}
+function activatePowerup(type){
+  if(type==='jump') jumpBoostTimer=5;
+  if(type==='fast') fastTimer=5;
+  if(type==='slow') slowTimer=5;
+  if(type==='invincible') invincibleTimer=15;
+  if(type==='ghost'){
+    ghostTimer=5;
+    setRunnerGhost(true);
+  }
+}
+function updatePowerHud(){
+  const map=[
+    ['jumpPill',jumpBoostTimer],
+    ['fastPill',fastTimer],
+    ['slowPill',slowTimer],
+    ['ghostPill',ghostTimer],
+    ['invinciblePill',invincibleTimer]
+  ];
+  for(const [id,timer] of map){
+    const el=document.getElementById(id);
+    el.style.display=timer>0?'block':'none';
+    el.querySelector('span').textContent=timer>0?timer.toFixed(1)+'s':'';
+  }
+}
+
+
+
+/* Pink flying fists: high obstacles that must be crouched under. */
+const flyingFists=[];
+const fistPink=new THREE.MeshStandardMaterial({color:0xff4fa3,roughness:.48});
+
+function spawnFlyingFist(){
+  const fist=new THREE.Group();
+
+  /* chunky palm */
+  mesh(fist,new THREE.BoxGeometry(1.15,.72,.72),fistPink,0,0,0);
+
+  /* four curled fingers across the top/front */
+  for(let i=0;i<4;i++){
+    const finger=mesh(
+      fist,
+      new THREE.BoxGeometry(.25,.55,.42),
+      fistPink,
+      -.42+i*.28,.43,-.12
+    );
+    finger.rotation.x=-.18;
+  }
+
+  /* thumb */
+  const thumb=mesh(fist,new THREE.BoxGeometry(.34,.58,.4),fistPink,-.68,-.03,-.02);
+  thumb.rotation.z=-.55;
+
+  fist.position.set(lanes[Math.floor(Math.random()*3)],3.05,-66);
+  fist.userData.isFlyingFist=true;
+  scene.add(fist);
+  flyingFists.push(fist);
+}
+
+function spawnObstacle(){
+  const o=new THREE.Mesh(
+    Math.random()<.5 ? new THREE.BoxGeometry(1.55,1.05,1) : new THREE.BoxGeometry(1.6,1.6,1),
+    Math.random()<.5 ? wood : stone
+  );
+  o.userData.lane=Math.floor(Math.random()*3);
+  o.position.x=lanes[o.userData.lane];
+  o.position.y=o.geometry.parameters.height/2;
+  o.position.z=-67;
+  o.castShadow=true;
+  scene.add(o);
+  obstacles.push(o);
+}
+
+/* ---------- input ---------- */
+function move(dir){
+  if(!running||settingsOpen||gameOver)return;
+  lane=Math.max(0,Math.min(2,lane+dir));
+  targetX=lanes[lane];
+}
+function jump(){
+  if(running&&!settingsOpen&&!gameOver&&grounded&&!crouching){
+    yVel=jumpBoostTimer>0 ? 15.0 : 11.2;
+    grounded=false;
+  }
+}
+function crouch(){
+  if(!running||settingsOpen||gameOver||!grounded)return;
+  crouching=true;
+  crouchTimer=.7;
+}
+function applyCrouchVisual(){
+  const runner=currentRunner();
+  if(crouching){
+    runner.scale.y += (.58-runner.scale.y)*.28;
+    runner.position.y=0;
+  }else{
+    runner.scale.y += (1-runner.scale.y)*.22;
+  }
+}
+
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')move(-1);
+  if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')move(1);
+  if(e.key==='ArrowUp'||e.key===' '||e.key.toLowerCase()==='w')jump();
+  if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')crouch();
+});
+addEventListener('wheel',e=>{
+  if(e.deltaY>0)crouch();
+},{passive:true});
+
+let touchStart=null;
+addEventListener('touchstart',e=>{
+  const t=e.touches[0];touchStart={x:t.clientX,y:t.clientY};
+},{passive:true});
+addEventListener('touchend',e=>{
+  if(!touchStart||settingsOpen)return;
+  const t=e.changedTouches[0],dx=t.clientX-touchStart.x,dy=t.clientY-touchStart.y;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>35)move(dx>0?1:-1);
+  else if(dy<-25)jump();
+  else if(dy>25)crouch();
+  else if(Math.abs(dx)<18)jump();
+  touchStart=null;
+},{passive:true});
+
+document.getElementById('signOutBtn').onclick=async()=>{
+  running=false;
+  settingsOpen=false;
+  await savePlayerProgress();
+  await supabase.auth.signOut();
+
+  currentUser=null;
+  currentUserId=null;
+  guestMode=false;
+  highScore=0;
+  highestUnlockedLevel=1;
+  selectCharacter('Billy',false);
+
+  document.getElementById('settingsOverlay').style.display='none';
+  document.getElementById('startOverlay').style.display='none';
+  document.getElementById('levelSelectOverlay').style.display='none';
+  document.getElementById('accountBadge').textContent='Not signed in';
+  document.getElementById('accountActions').style.display='none';
+  document.getElementById('authOverlay').style.display='flex';
+  document.getElementById('high').textContent='High Score: 0';
+  showAuthHome();
+};
+
+
+function closeAccountModals(){
+  document.getElementById('changePasswordModal').style.display='none';
+  document.getElementById('deleteAccountModal').style.display='none';
+}
+
+document.getElementById('changePasswordBtn').onclick=()=>{
+  currentPasswordInput.value=''; newPasswordInput.value=''; confirmNewPasswordInput.value='';
+  changePasswordMessage.textContent=''; changePasswordMessage.className='modalError';
+  changePasswordModal.style.display='flex';
+};
+document.getElementById('cancelChangePassword').onclick=()=>changePasswordModal.style.display='none';
+
+document.getElementById('saveNewPassword').onclick=async()=>{
+  const current=currentPasswordInput.value, next=newPasswordInput.value, confirm=confirmNewPasswordInput.value;
+  changePasswordMessage.className='modalError'; changePasswordMessage.textContent='';
+  if(!current){changePasswordMessage.textContent='Enter your current password.';return;}
+  if(!validPassword(next)){changePasswordMessage.textContent='New password must be at least 8 characters and include uppercase, lowercase and a special character, with no spaces.';return;}
+  if(next!==confirm){changePasswordMessage.textContent='New passwords do not match.';return;}
+  if(next===current){changePasswordMessage.textContent='Your new password must be different.';return;}
+
+  saveNewPassword.disabled=true; saveNewPassword.textContent='CHANGING...';
+  try{
+    const {error}=await supabase.auth.updateUser({password:next,current_password:current});
+    if(error){changePasswordMessage.textContent='Current password is incorrect, or the new password was rejected.';return;}
+    changePasswordMessage.className='modalSuccess';
+    changePasswordMessage.textContent='Password changed successfully!';
+    setTimeout(()=>changePasswordModal.style.display='none',900);
+  }finally{
+    saveNewPassword.disabled=false; saveNewPassword.textContent='CHANGE';
+  }
+};
+
+document.getElementById('deleteAccountBtn').onclick=()=>{
+  deletePasswordInput.value=''; deleteConfirmInput.value='';
+  deleteAccountMessage.textContent=''; deleteAccountModal.style.display='flex';
+};
+document.getElementById('cancelDeleteAccount').onclick=()=>deleteAccountModal.style.display='none';
+
+document.getElementById('confirmDeleteAccount').onclick=async()=>{
+  const password=deletePasswordInput.value, confirmation=deleteConfirmInput.value.trim();
+  deleteAccountMessage.textContent='';
+  if(!password){deleteAccountMessage.textContent='Enter your current password.';return;}
+  if(confirmation!=='DELETE'){deleteAccountMessage.textContent='Type DELETE exactly to confirm.';return;}
+
+  confirmDeleteAccount.disabled=true; confirmDeleteAccount.textContent='DELETING...';
+  try{
+    const {error:verifyError}=await supabase.auth.signInWithPassword({
+      email:usernameToInternalEmail(currentUser),password
+    });
+    if(verifyError){deleteAccountMessage.textContent='Current password is incorrect.';return;}
+
+    const {data,error}=await supabase.functions.invoke('delete-account',{body:{confirm:true}});
+    if(error || !data?.ok){
+      deleteAccountMessage.textContent='Account deletion is not available yet. Deploy the secure delete-account Edge Function in Supabase.';
+      return;
+    }
+
+    await supabase.auth.signOut();
+    currentUser=null; currentUserId=null; guestMode=false; highScore=0; highestUnlockedLevel=1;
+    selectCharacter('Billy',false);
+    closeAccountModals();
+    settingsOverlay.style.display='none'; startOverlay.style.display='none'; levelSelectOverlay.style.display='none';
+    accountActions.style.display='none'; accountBadge.textContent='Not signed in'; high.textContent='High Score: 0';
+    authOverlay.style.display='flex'; showAuthHome();
+  }finally{
+    confirmDeleteAccount.disabled=false; confirmDeleteAccount.textContent='DELETE FOREVER';
+  }
+};
+
+/* ---------- settings ---------- */
+document.getElementById('gear').onclick=()=>{
+  if(gameOver)return;
+  settingsOpen=true;
+  document.getElementById('settingsOverlay').style.display='block';
+};
+document.getElementById('closeSettings').onclick=()=>{
+  settingsOpen=false;
+  document.getElementById('settingsOverlay').style.display='none';
+};
+const babyToggle=document.getElementById('babyToggle');
+const babyModeRow=document.getElementById('babyModeRow');
+
+function updateBabyModeAvailability(){
+  const allowed=gameMode==='Endless';
+  babyToggle.disabled=!allowed;
+  babyModeRow.classList.toggle('disabled',!allowed);
+  document.getElementById('babyNote').textContent=allowed
+    ? 'Baby Mode = free endless running. Nothing can hurt you — just run and collect orbs.'
+    : 'Baby Mode is only available in Endless Mode.';
+  if(!allowed){
+    babyToggle.checked=false;
+    babyMode=false;
+  }
+}
+
+babyToggle.onchange=e=>{
+  babyMode=(gameMode==='Endless') && e.target.checked;
+};
+
+/* One source of truth for all current and future hazards. */
+function protectedFromAllHazards(){
+  return (babyMode && gameMode==='Endless') || invincibleTimer>0;
+}
+function protectedFromFlyingFists(){
+  return protectedFromAllHazards() || ghostTimer>0;
+}
+
+
+function showPreGameCharacterSelect(mode){
+  pendingMode=mode;
+  pendingCharacter=activeName || 'Billy';
+  running=false;
+
+  document.getElementById('startOverlay').style.display='none';
+  document.getElementById('levelSelectOverlay').style.display='none';
+  document.getElementById('preGameCharacterOverlay').style.display='flex';
+
+  document.querySelectorAll('.preGameCharBtn').forEach(btn=>{
+    btn.classList.toggle('selected',btn.dataset.character===pendingCharacter);
+  });
+}
+
+document.querySelectorAll('.preGameCharBtn').forEach(btn=>{
+  btn.onclick=()=>{
+    pendingCharacter=btn.dataset.character;
+    document.querySelectorAll('.preGameCharBtn').forEach(b=>b.classList.toggle('selected',b===btn));
+  };
+});
+
+document.getElementById('confirmCharacterBtn').onclick=()=>{
+  selectCharacter(pendingCharacter,true);
+  document.getElementById('preGameCharacterOverlay').style.display='none';
+
+  if(pendingMode==='Adventure'){
+    showLevelSelect();
+  }else{
+    beginEndlessRun();
+  }
+};
+
+document.getElementById('cancelCharacterBtn').onclick=()=>{
+  pendingMode=null;
+  document.getElementById('preGameCharacterOverlay').style.display='none';
+  document.getElementById('startOverlay').style.display='flex';
+};
+
+function beginEndlessRun(){
+  gameMode='Endless';
+  running=true;
+  gameOver=false;
+  score=0;
+  elapsed=0;
+  lane=1;
+  targetX=0;
+
+  for(const c of Object.values(characters)){
+    c.position.set(0,0,2.4);
+    c.scale.set(1,1,1);
+  }
+
+  document.getElementById('startOverlay').style.display='none';
+  document.getElementById('levelSelectOverlay').style.display='none';
+  document.getElementById('preGameCharacterOverlay').style.display='none';
+  document.getElementById('level').textContent='ENDLESS MODE';
+  document.getElementById('progressWrap').style.display='none';
+
+  setCharacterButtonsLocked(true);
+  updateBabyModeAvailability();
+}
+
+function renderLevelSelect(){
+  const grid=document.getElementById('levelGrid');
+  grid.innerHTML='';
+  for(let lvl=1;lvl<=TOTAL_ADVENTURE_LEVELS;lvl++){
+    const btn=document.createElement('button');
+    const unlocked=lvl<=highestUnlockedLevel;
+    const completed=lvl<highestUnlockedLevel;
+    btn.className='levelBtn'+(unlocked?'':' locked')+(completed?' completed':'');
+    btn.innerHTML='LEVEL '+lvl+'<small>'+(completed?'COMPLETED ✓':unlocked?'PLAY':'LOCKED 🔒')+'</small>';
+    if(unlocked) btn.onclick=()=>startAdventureLevel(lvl);
+    grid.appendChild(btn);
+  }
+}
+
+function showLevelSelect(){
+  gameMode='Adventure';
+  running=false;
+  gameOver=false;
+  document.getElementById('startOverlay').style.display='none';
+  document.getElementById('levelSelectOverlay').style.display='flex';
+  renderLevelSelect();
+  updateBabyModeAvailability();
+}
+
+function startAdventureLevel(lvl){
+  currentAdventureLevel=lvl;
+  obstacles.forEach(o=>scene.remove(o));
+  powerups.forEach(o=>scene.remove(o));
+  xpOrbs.forEach(o=>scene.remove(o));
+  flyingFists.forEach(o=>scene.remove(o));
+  obstacles.length=0; powerups.length=0; xpOrbs.length=0; flyingFists.length=0;
+  lane=1; targetX=0;
+  for(const c of Object.values(characters)){c.position.set(0,0,2.4);c.scale.set(1,1,1);}
+  yVel=0; grounded=true; crouching=false; crouchTimer=0;
+  score=0; level=lvl; speed=13; spawnTimer=.9; powerSpawnTimer=7.0;
+  goldenSpawnTimer=28+Math.random()*22; xpSpawnTimer=.8; fistSpawnTimer=5.5; elapsed=0;
+  jumpBoostTimer=0; fastTimer=0; slowTimer=0; ghostTimer=0; invincibleTimer=0;
+  setRunnerGhost(false);
+  babyMode=false; babyToggle.checked=false;
+  running=true; gameOver=false; settingsOpen=false;
+  setCharacterButtonsLocked(true);
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('settingsOverlay').style.display='none';
+  document.getElementById('levelSelectOverlay').style.display='none';
+  document.getElementById('progressWrap').style.display='block';
+  updateBabyModeAvailability();
+}
+
+function completeAdventureLevel(){
+  running=false;
+  setCharacterButtonsLocked(false);
+  if(currentAdventureLevel>=highestUnlockedLevel && highestUnlockedLevel<TOTAL_ADVENTURE_LEVELS){
+    highestUnlockedLevel=currentAdventureLevel+1;
+  }
+  savePlayerProgress();
+  document.getElementById('levelSelectOverlay').style.display='flex';
+  renderLevelSelect();
+}
+
+document.getElementById('backToModes').onclick=()=>{
+  running=false;
+  gameMode=null;
+  setCharacterButtonsLocked(false);
+  document.getElementById('levelSelectOverlay').style.display='none';
+  document.getElementById('startOverlay').style.display='flex';
+  updateBabyModeAvailability();
+};
+
+function startGame(mode){
+  showPreGameCharacterSelect(mode);
+}
+document.getElementById('endlessModeBtn').onclick=()=>startGame('Endless');
+document.getElementById('adventureModeBtn').onclick=()=>startGame('Adventure');
+
+
+/* ---------- pause ---------- */
+function togglePause(){
+  if(settingsOpen||gameOver)return;
+  running=!running;
+  if(!running){
+    document.getElementById('statusTitle').textContent='ROBO-DASH';
+    document.getElementById('mainTitle').textContent='PAUSED';
+    document.getElementById('finalScore').textContent='Score: '+Math.floor(score);
+    document.getElementById('retry').style.display='inline-block';
+    document.getElementById('quitRun').style.display='inline-block';
+    document.getElementById('resume').style.display='inline-block';
+    document.getElementById('overlay').style.display='flex';
+  }else{
+    document.getElementById('overlay').style.display='none';
+  }
+}
+document.getElementById('pause').onclick=togglePause;
+document.getElementById('resume').onclick=togglePause;
+
+/* ---------- game over ---------- */
+function endGame(){
+  if(protectedFromAllHazards())return;
+  gameOver=true;
+  running=false;
+  const s=Math.floor(score);
+  let msg='';
+  if(s>highScore){
+    highScore=s;
+    savePlayerProgress();
+    msg='New High Score!';
+  }
+  document.getElementById('statusTitle').textContent='SUPER JUMP!';
+  document.getElementById('mainTitle').textContent='GAME OVER';
+  document.getElementById('finalScore').textContent='Score: '+s;
+  document.getElementById('newHigh').textContent=msg;
+  document.getElementById('retry').style.display='inline-block';
+  document.getElementById('quitRun').style.display='inline-block';
+  document.getElementById('resume').style.display='none';
+  document.getElementById('overlay').style.display='flex';
+  setCharacterButtonsLocked(false);
+}
+
+function reset(){
+  obstacles.forEach(o=>scene.remove(o));
+  powerups.forEach(o=>scene.remove(o));
+  xpOrbs.forEach(o=>scene.remove(o));
+  flyingFists.forEach(o=>scene.remove(o));
+  obstacles.length=0;
+  powerups.length=0;
+  xpOrbs.length=0;
+  flyingFists.length=0;
+  lane=1;targetX=0;
+  for(const c of Object.values(characters))c.position.set(0,0,2.4);
+  yVel=0;grounded=true;
+  score=0;level=1;speed=13;spawnTimer=.9;powerSpawnTimer=3.2;xpSpawnTimer=.8;elapsed=0;
+  jumpBoostTimer=fastTimer=slowTimer=ghostTimer=invincibleTimer=0;
+  crouching=false;crouchTimer=0;
+  babyMode=false;
+  babyToggle.checked=false;
+  setRunnerGhost(false);
+  updateBabyModeAvailability();
+  gameOver=false;settingsOpen=false;
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('settingsOverlay').style.display='none';
+  if(gameMode==='Adventure'){
+    running=false;
+    document.getElementById('levelSelectOverlay').style.display='flex';
+    renderLevelSelect();
+  }else{
+    running=true;
+  }
+}
+document.getElementById('retry').onclick=()=>{
+  running=false;
+  gameOver=false;
+  settingsOpen=false;
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('quitRun').style.display='none';
+
+  if(gameMode==='Adventure'){
+    startAdventureLevel(currentAdventureLevel);
+  }else{
+    obstacles.forEach(o=>scene.remove(o));
+    powerups.forEach(o=>scene.remove(o));
+    xpOrbs.forEach(o=>scene.remove(o));
+    flyingFists.forEach(o=>scene.remove(o));
+    obstacles.length=0; powerups.length=0; xpOrbs.length=0; flyingFists.length=0;
+
+    lane=1; targetX=0;
+    for(const c of Object.values(characters)){c.position.set(0,0,2.4);c.scale.set(1,1,1);}
+    yVel=0; grounded=true; crouching=false; crouchTimer=0;
+    score=0; speed=13; spawnTimer=.9; powerSpawnTimer=7.0;
+    goldenSpawnTimer=28+Math.random()*22; xpSpawnTimer=.8; fistSpawnTimer=5.5; elapsed=0;
+    jumpBoostTimer=fastTimer=slowTimer=ghostTimer=invincibleTimer=0;
+    setRunnerGhost(false);
+    gameOver=false; running=true; settingsOpen=false;
+    setCharacterButtonsLocked(true);
+  }
+};
+
+
+document.getElementById('quitRun').onclick=()=>{
+  running=false;
+  gameOver=false;
+  settingsOpen=false;
+  pendingMode=null;
+
+  obstacles.forEach(o=>scene.remove(o));
+  powerups.forEach(o=>scene.remove(o));
+  xpOrbs.forEach(o=>scene.remove(o));
+  flyingFists.forEach(o=>scene.remove(o));
+  obstacles.length=0; powerups.length=0; xpOrbs.length=0; flyingFists.length=0;
+
+  score=0;
+  elapsed=0;
+  lane=1;
+  targetX=0;
+  yVel=0;
+  grounded=true;
+  crouching=false;
+  crouchTimer=0;
+  jumpBoostTimer=fastTimer=slowTimer=ghostTimer=invincibleTimer=0;
+  setRunnerGhost(false);
+
+  for(const c of Object.values(characters)){
+    c.position.set(0,0,2.4);
+    c.scale.set(1,1,1);
+  }
+
+  setCharacterButtonsLocked(false);
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('settingsOverlay').style.display='none';
+  document.getElementById('levelSelectOverlay').style.display='none';
+  document.getElementById('preGameCharacterOverlay').style.display='none';
+  document.getElementById('progressWrap').style.display='block';
+  document.getElementById('startOverlay').style.display='flex';
+  gameMode=null;
+  updateBabyModeAvailability();
+};
+
+/* ---------- animation ---------- */
+const clock=new THREE.Clock();
+
+function animate(){
+  const dt=Math.min(clock.getDelta(),.035);
+
+  if(running&&!gameOver&&!settingsOpen){
+    elapsed+=dt;
+    if(gameMode==='Adventure') level=currentAdventureLevel;
+    else level=1;
+
+    /* The longer you survive, the faster RoboDash gets. */
+    let baseSpeed = 13 + elapsed*.075;
+    if(gameMode==='Adventure') baseSpeed += (currentAdventureLevel-1)*1.15;
+    if(fastTimer>0) baseSpeed += 6;
+    if(slowTimer>0) baseSpeed -= 5;
+    speed=Math.max(7,Math.min(32,baseSpeed));
+    /* XP is earned from white XP orbs instead of automatically while running. */
+
+    if(crouchTimer>0){
+      crouchTimer-=dt;
+      if(crouchTimer<=0)crouching=false;
+    }
+    jumpBoostTimer=Math.max(0,jumpBoostTimer-dt);
+    fastTimer=Math.max(0,fastTimer-dt);
+    slowTimer=Math.max(0,slowTimer-dt);
+    invincibleTimer=Math.max(0,invincibleTimer-dt);
+    if(ghostTimer>0){
+      ghostTimer=Math.max(0,ghostTimer-dt);
+      if(ghostTimer===0)setRunnerGhost(false);
+    }
+
+    const runner=currentRunner();
+
+    runner.position.x+=(targetX-runner.position.x)*Math.min(1,dt*12);
+    applyCrouchVisual();
+
+    yVel-=22*dt;
+    runner.position.y+=yVel*dt;
+    if(runner.position.y<=0){
+      runner.position.y=0;
+      yVel=0;
+      grounded=true;
+    }
+
+    /* CLEAR, VISIBLE RUNNING ANIMATION */
+    const eyeOff=ghostEyeOffset();
+    ghostEyes.position.set(runner.position.x,runner.position.y+eyeOff.y,runner.position.z+eyeOff.z);
+    ghostEyes.scale.y=runner.scale.y;
+
+    const phase=elapsed*10.5;
+
+    if(activeName==='Billy'){
+      billyLA.rotation.x=Math.sin(phase)*.95;
+      billyRA.rotation.x=-Math.sin(phase)*.95;
+      billyLL.rotation.x=-Math.sin(phase)*.95;
+      billyRL.rotation.x=Math.sin(phase)*.95;
+      billyTorso.position.y=2.15+Math.abs(Math.sin(phase))*0.05;
+    }
+    if(activeName==='Bob'){
+      bobLA.rotation.x=Math.sin(phase)*.75;
+      bobRA.rotation.x=-Math.sin(phase)*.75;
+      bobLeftLeg.rotation.x=-Math.sin(phase)*.42;
+      bobRightLeg.rotation.x=Math.sin(phase)*.42;
+      bobBody.rotation.z=Math.sin(phase*2)*.035;
+      bob.position.y+=Math.abs(Math.sin(phase))*0.015;
+    }
+    if(activeName==='Lily'){
+      lilyLA.rotation.x=Math.sin(phase)*.72;
+      lilyRA.rotation.x=-Math.sin(phase)*.72;
+      lilyBody.rotation.z=Math.sin(phase*2)*.035;
+      lilyHair.rotation.z=-Math.sin(phase*2)*.018;
+    }
+
+    if(activeName==='TMS'){
+      /* TMS running cycle */
+      tmsLA.rotation.x=Math.sin(phase)*.78;
+      tmsRA.rotation.x=-Math.sin(phase)*.78;
+      tmsLL.rotation.x=-Math.sin(phase)*.82;
+      tmsRL.rotation.x=Math.sin(phase)*.82;
+
+      /* slight scientist-style bounce/sway */
+      tms.rotation.z=Math.sin(phase*2)*.028;
+      tms.position.y+=Math.abs(Math.sin(phase))*0.025;
+    }
+
+    if(activeName==='Eree'){
+      /* Eree's branches and roots swing while the leafy crown gently bobs. */
+      ereeLA.rotation.x=Math.sin(phase)*.62;
+      ereeRA.rotation.x=-Math.sin(phase)*.62;
+      ereeLL.rotation.x=-Math.sin(phase)*.58;
+      ereeRL.rotation.x=Math.sin(phase)*.58;
+      ereeBody.rotation.z=Math.sin(phase*2)*.018;
+      crown.rotation.z=-Math.sin(phase*2)*.025;
+      eree.position.y+=Math.abs(Math.sin(phase))*0.018;
+    }
+
+
+    /* Extra Robodex character animation system */
+    if(['Borilla','Scientist'].includes(activeName)){
+      const a=currentRunner().userData.anim;
+      if(a){
+        a.arms.forEach((g,i)=>g.rotation.x=(i%2? -1:1)*Math.sin(phase)*.72);
+        a.legs.forEach((g,i)=>g.rotation.x=(i%2? 1:-1)*Math.sin(phase)*.72);
+        a.extras.forEach((g,i)=>g.rotation.z=Math.sin(phase*2+i)*.03);
+      }
+      currentRunner().position.y+=Math.abs(Math.sin(phase))*.014;
+    }
+    if(activeName==='Ritty'){
+      ritLA.rotation.x=Math.sin(phase)*.62;ritRA.rotation.x=-Math.sin(phase)*.62;
+      ritLL.rotation.x=-Math.sin(phase)*.72;ritRL.rotation.x=Math.sin(phase)*.72;
+      ritTail.rotation.z=Math.sin(phase*.8)*.07;
+      ritty.position.y+=Math.abs(Math.sin(phase))*.014;
+    }
+    if(activeName==='Riark'){
+      riaLegs.forEach((g,i)=>g.rotation.x=(i%2?1:-1)*Math.sin(phase)*.48);
+      riarkBody.rotation.z=Math.sin(phase*2)*.012;
+      riaTail.rotation.z=Math.sin(phase*.8)*.05;
+      riark.position.y+=Math.abs(Math.sin(phase))*.010;
+    }
+    if(activeName==='Right'){
+      rigLegs.forEach((g,i)=>g.rotation.x=(i%2?1:-1)*Math.sin(phase)*.46);
+      rigBody.rotation.z=Math.sin(phase*2)*.012;
+      rigTail.rotation.z=Math.sin(phase*.8)*.05;
+      right.position.y+=Math.abs(Math.sin(phase))*.010;
+    }
+    if(activeName==='Sapling'){
+      sapling.rotation.z=Math.sin(phase*2)*.025;
+      leaf1.rotation.z=.25+Math.sin(phase)*.10;
+      leaf2.rotation.z=-.25-Math.sin(phase)*.10;
+      sapling.position.y+=Math.abs(Math.sin(phase))*.022;
+    }
+    if(activeName==='Watcheree'){
+      watcheree.rotation.z=Math.sin(phase*2)*.022;
+      watLA.rotation.x=Math.sin(phase)*.55;watRA.rotation.x=-Math.sin(phase)*.55;
+      watCrown.rotation.z=-Math.sin(phase*2)*.025;
+    }
+    if(activeName==='Fire Eree'){
+      fLA.rotation.x=Math.sin(phase)*.70;fRA.rotation.x=-Math.sin(phase)*.70;
+      fireCrown.scale.y=.62+Math.sin(phase*3)*.025;
+      fireEree.rotation.z=Math.sin(phase*2)*.018;
+    }
+    if(activeName==='Serpently'){
+      serpBody.rotation.z=Math.sin(phase)*.10;
+      serpently.rotation.z=Math.sin(phase*.8)*.04;
+      serpently.position.y+=Math.abs(Math.sin(phase))*0.018;
+    }
+
+    for(const p of pathSegments){
+      p.position.z+=speed*dt;
+      if(p.position.z>10)p.position.z-=SEG_COUNT*SEG_LEN;
+    }
+
+    fistSpawnTimer-=dt;
+    if(fistSpawnTimer<=0){
+      spawnFlyingFist();
+      fistSpawnTimer=5.0+Math.random()*4.5;
+    }
+
+    spawnTimer-=dt;
+    if(spawnTimer<=0){
+      spawnObstacle();
+      spawnTimer=Math.max(.62,1.25-(gameMode==='Adventure'?level*.03:0))+Math.random()*.4;
+    }
+
+    /* White XP orbs: common, but spaced out enough to stay meaningful. */
+    xpSpawnTimer-=dt;
+    if(xpSpawnTimer<=0){
+      spawnXPOrb();
+      xpSpawnTimer=.65+Math.random()*.75;
+    }
+
+    for(let i=xpOrbs.length-1;i>=0;i--){
+      const x=xpOrbs[i];
+      x.position.z+=speed*dt;
+      x.rotation.y+=dt*4;
+      if(x.position.z>12){
+        scene.remove(x);xpOrbs.splice(i,1);continue;
+      }
+      const xBox=new THREE.Box3().setFromObject(x);
+      const collectBox=new THREE.Box3().setFromCenterAndSize(
+        new THREE.Vector3(runner.position.x,runner.position.y+1.55,runner.position.z),
+        new THREE.Vector3(1.45,crouching?1.8:3.25,1.25)
+      );
+      if(collectBox.intersectsBox(xBox)){
+        score+=10;
+        scene.remove(x);xpOrbs.splice(i,1);
+      }
+    }
+
+    /* SUPER rare golden invincibility orb. */
+    goldenSpawnTimer-=dt;
+    if(goldenSpawnTimer<=0){
+      spawnGoldenOrb();
+      /* Usually only appears after a long stretch of running. */
+      goldenSpawnTimer=35+Math.random()*35;
+    }
+
+    if(gameMode==='Adventure' && score>=ADVENTURE_LEVEL_XP){
+      completeAdventureLevel();
+    }
+
+    powerSpawnTimer-=dt;
+    if(powerSpawnTimer<=0){
+      spawnPowerup();
+      powerSpawnTimer=8.0+Math.random()*5.0;
+    }
+
+    for(let i=powerups.length-1;i>=0;i--){
+      const p=powerups[i];
+      p.position.z+=speed*dt;
+      p.rotation.y+=dt*3;
+      if(p.position.z>12){
+        scene.remove(p);powerups.splice(i,1);continue;
+      }
+      const pBox=new THREE.Box3().setFromObject(p);
+      const collectBox=new THREE.Box3().setFromCenterAndSize(
+        new THREE.Vector3(runner.position.x,runner.position.y+1.65,runner.position.z),
+        new THREE.Vector3(1.4,crouching?1.7:3.3,1.2)
+      );
+      if(collectBox.intersectsBox(pBox)){
+        activatePowerup(p.userData.type);
+        scene.remove(p);powerups.splice(i,1);
+      }
+    }
+
+    const boxSize=activeName==='Bob'
+      ? new THREE.Vector3(1.25,3.4,.9)
+      : activeName==='Lily'
+        ? new THREE.Vector3(1.35,3.35,.88)
+        : activeName==='Eree'
+          ? new THREE.Vector3(1.55,3.65,.9)
+          : ['Watcheree','Fire Eree'].includes(activeName)
+            ? new THREE.Vector3(1.65,3.6,.9)
+            : activeName==='Serpently'
+              ? new THREE.Vector3(1.35,3.7,.9)
+              : ['Riark','Right'].includes(activeName)
+                ? new THREE.Vector3(2.0,2.8,.95)
+                : new THREE.Vector3(1.15,3.45,.82);
+
+    const effectiveBox = crouching
+      ? new THREE.Vector3(boxSize.x,boxSize.y*.52,boxSize.z)
+      : boxSize;
+    const playerBox=new THREE.Box3().setFromCenterAndSize(
+      new THREE.Vector3(runner.position.x,runner.position.y+(crouching?.95:1.85),runner.position.z),
+      effectiveBox
+    );
+
+
+    for(let i=flyingFists.length-1;i>=0;i--){
+      const f=flyingFists[i];
+      f.position.z+=speed*dt*1.08;
+      f.rotation.z=Math.sin(elapsed*7+i)*.06;
+
+      if(f.position.z>12){
+        scene.remove(f);
+        flyingFists.splice(i,1);
+        continue;
+      }
+
+      /* At standing height the fist hits you.
+         Crouching lowers the player's collision box enough to pass underneath. */
+      if(!protectedFromFlyingFists()){
+        const fistBox=new THREE.Box3().setFromObject(f);
+        if(playerBox.intersectsBox(fistBox)){
+          endGame();
+          break;
+        }
+      }
+    }
+
+    for(let i=obstacles.length-1;i>=0;i--){
+      const o=obstacles[i];
+      o.position.z+=speed*dt;
+      if(o.position.z>12){
+        scene.remove(o);
+        obstacles.splice(i,1);
+        continue;
+      }
+      if(!protectedFromAllHazards()){
+        const ob=new THREE.Box3().setFromObject(o);
+        if(playerBox.intersectsBox(ob)){
+          endGame();
+          break;
+        }
+      }
+    }
+
+    camera.position.x+=(runner.position.x*.17-camera.position.x)*Math.min(1,dt*5);
+  }
+
+  const s=Math.floor(score);
+  if(gameMode==='Endless'){
+    document.getElementById('level').textContent='ENDLESS MODE';
+    document.getElementById('score').textContent='XP: '+s;
+  }else if(gameMode==='Adventure'){
+    document.getElementById('level').textContent='LEVEL '+currentAdventureLevel;
+    document.getElementById('score').textContent='XP: '+s+' / '+ADVENTURE_LEVEL_XP;
+    document.getElementById('progress').style.width=(Math.min(s,ADVENTURE_LEVEL_XP)/ADVENTURE_LEVEL_XP*100)+'%';
+  }else{
+    document.getElementById('level').textContent='CHOOSE MODE';
+    document.getElementById('score').textContent='XP: 0';
+  }
+  document.getElementById('high').textContent='High Score: '+Math.max(highScore,s);
+  updatePowerHud();
+
+  renderer.render(scene,camera);
+}
+
+renderer.setAnimationLoop(animate);
+
+/* render once immediately so Billy is visible BEFORE touching settings */
+renderer.render(scene,camera);
+
+addEventListener('resize',()=>{
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+</script>
+</body>
+</html>
