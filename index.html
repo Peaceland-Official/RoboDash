@@ -743,150 +743,118 @@ roundedLimb(sciLA,sciGrey,0,-.45,0,1,1.2,1);roundedLimb(sciRA,sciGrey,0,-.45,0,1
 const sciLL=new THREE.Group(),sciRL=new THREE.Group();sciLL.position.set(-.34,.95,0);sciRL.position.set(.34,.95,0);scientist.add(sciLL,sciRL);sciA.legs.push(sciLL,sciRL);
 roundedLimb(sciLL,sciGrey,0,-.38,0,1,1.2,1);roundedLimb(sciRL,sciGrey,0,-.38,0,1,1.2,1);
 
-/* ---------- RITTY FAMILY — REBUILT FROM ROBODEX ART ---------- */
-const catGrey=new THREE.MeshStandardMaterial({color:0xa7a7a7,roughness:.74});
-const catPink=new THREE.MeshStandardMaterial({color:0xf13ba3,roughness:.62});
-const catRed=new THREE.MeshStandardMaterial({color:0xea382b,roughness:.62});
-const catBlack=new THREE.MeshStandardMaterial({color:0x050505,roughness:.76});
-const catWhite=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.75});
-const catYellow=new THREE.MeshStandardMaterial({color:0xffd332,roughness:.62});
+/* ---------- RITTY FAMILY — ROBODEX-STYLE REBUILD ---------- */
+const catGrey=new THREE.MeshStandardMaterial({color:0xa5a5a5,roughness:.72});
+const catPink=new THREE.MeshStandardMaterial({color:0xf23aa6,roughness:.60});
+const catRed=new THREE.MeshStandardMaterial({color:0xe93a31,roughness:.62});
+const catBlack=new THREE.MeshStandardMaterial({color:0x050505,roughness:.75});
+const catYellow=new THREE.MeshStandardMaterial({color:0xffd536,roughness:.62});
 
-/* shared tail-band detail */
-function addRittyTailBand(parent,x,y,z,rot=0){
-  const band=mesh(parent,new THREE.CylinderGeometry(.18,.18,.34,10),catYellow,x,y,z);
-  band.rotation.z=Math.PI/2+rot;
-  const dot=mesh(parent,new THREE.SphereGeometry(.075,10,8),catRed,x,y-.01,z-.18);
-  return {band,dot};
+function addSimpleCatFace(parent,cx,cy,z,happy=false,angry=false){
+  if(happy){
+    const l=mesh(parent,new THREE.BoxGeometry(.22,.06,.06),catBlack,cx-.19,cy,z);
+    const r=mesh(parent,new THREE.BoxGeometry(.22,.06,.06),catBlack,cx+.19,cy,z);
+    l.rotation.z=.35; r.rotation.z=-.35;
+  }else if(angry){
+    const l=mesh(parent,new THREE.BoxGeometry(.23,.06,.06),catBlack,cx-.19,cy,z);
+    const r=mesh(parent,new THREE.BoxGeometry(.23,.06,.06),catBlack,cx+.19,cy,z);
+    l.rotation.z=-.45; r.rotation.z=.45;
+  }else{
+    mesh(parent,new THREE.BoxGeometry(.07,.27,.06),catBlack,cx-.19,cy,z);
+    mesh(parent,new THREE.BoxGeometry(.07,.27,.06),catBlack,cx+.19,cy,z);
+  }
+  mesh(parent,new THREE.SphereGeometry(.09,10,8),catPink,cx,cy-.20,z-.01);
 }
-function addCatEars(parent,cx,cy,z,scale=1){
+
+function addSimpleCatEars(parent,cx,cy,z,scale=1){
   for(const sx of [-1,1]){
-    const ear=mesh(parent,new THREE.ConeGeometry(.22*scale,.42*scale,4),catGrey,cx+sx*.32*scale,cy,z);
+    const ear=mesh(parent,new THREE.ConeGeometry(.22*scale,.42*scale,4),catGrey,cx+sx*.31*scale,cy,z);
     ear.rotation.z=sx*.10;
-    const inner=mesh(parent,new THREE.ConeGeometry(.11*scale,.23*scale,4),catPink,cx+sx*.32*scale,cy+.01,z-.20);
+    const inner=mesh(parent,new THREE.ConeGeometry(.10*scale,.22*scale,4),catPink,cx+sx*.31*scale,cy+.01,z-.18);
     inner.rotation.z=sx*.10;
   }
 }
 
-/* Ritty #018 — upright, slim, two chest spots, hip spot and long curved tail */
+function addTailBand(parent,x,y,z){
+  mesh(parent,new THREE.BoxGeometry(.28,.20,.28),catYellow,x,y,z);
+  mesh(parent,new THREE.SphereGeometry(.055,8,6),catRed,x,y,z-.16);
+}
+
+/* Ritty #018 — upright/slim with two chest spots, side spot and long tail */
 const ritty=new THREE.Group();ritty.position.set(0,0,2.4);ritty.visible=false;scene.add(ritty);
 const ritA=makeRunnerParts(ritty);
+const ritBody=mesh(ritty,new THREE.CapsuleGeometry(.44,1.20,6,12),catGrey,0,1.72,0);
+ritBody.scale.set(.82,1.05,.76);
+mesh(ritty,new THREE.BoxGeometry(.96,.90,.68),catGrey,0,3.05,0);
+addSimpleCatEars(ritty,0,3.60,0,1);
+addSimpleCatFace(ritty,0,3.10,-.36,false,false);
+mesh(ritty,new THREE.SphereGeometry(.13,10,8),catRed,-.20,2.12,-.46);
+mesh(ritty,new THREE.SphereGeometry(.13,10,8),catRed,.22,2.08,-.46);
+mesh(ritty,new THREE.SphereGeometry(.17,10,8),catRed,.43,1.50,-.38);
 
-const ritTorso=mesh(ritty,new THREE.CapsuleGeometry(.52,1.25,6,12),catGrey,0,1.72,0);
-ritTorso.scale.set(.82,1.08,.76);
-const ritHead=mesh(ritty,new THREE.BoxGeometry(1.02,.95,.70),catGrey,0,3.08,0);
-addCatEars(ritty,0,3.67,0,1);
-
-/* Ritty face: narrow black eyes + big pink triangular nose/muzzle */
-mesh(ritty,new THREE.BoxGeometry(.075,.29,.06),catBlack,-.21,3.13,-.375).rotation.z=.05;
-mesh(ritty,new THREE.BoxGeometry(.075,.29,.06),catBlack,.21,3.13,-.375).rotation.z=-.05;
-const ritNose=mesh(ritty,new THREE.ConeGeometry(.14,.22,3),catPink,0,2.91,-.405);ritNose.rotation.z=Math.PI;
-const ritSmileL=mesh(ritty,new THREE.TorusGeometry(.15,.035,6,12,Math.PI),catBlack,-.14,2.83,-.407);ritSmileL.rotation.z=Math.PI;
-const ritSmileR=mesh(ritty,new THREE.TorusGeometry(.15,.035,6,12,Math.PI),catBlack,.14,2.83,-.407);ritSmileR.rotation.z=Math.PI;
-
-/* red body markings from the Robodex */
-mesh(ritty,new THREE.SphereGeometry(.14,12,10),catRed,-.22,2.15,-.48);
-mesh(ritty,new THREE.SphereGeometry(.14,12,10),catRed,.23,2.10,-.48);
-mesh(ritty,new THREE.SphereGeometry(.18,12,10),catRed,.48,1.46,-.40);
-
-/* four slim limbs — front arms and feet */
 const ritLA=new THREE.Group(),ritRA=new THREE.Group();
-ritLA.position.set(-.35,1.92,0);ritRA.position.set(.35,1.92,0);ritty.add(ritLA,ritRA);ritA.arms.push(ritLA,ritRA);
-roundedLimb(ritLA,catGrey,0,-.47,0,.78,1.15,.82);roundedLimb(ritRA,catGrey,0,-.47,0,.78,1.15,.82);
+ritLA.position.set(-.34,1.98,0);ritRA.position.set(.34,1.98,0);ritty.add(ritLA,ritRA);ritA.arms.push(ritLA,ritRA);
+roundedLimb(ritLA,catGrey,0,-.44,0,.75,1.1,.8);roundedLimb(ritRA,catGrey,0,-.44,0,.75,1.1,.8);
 const ritLL=new THREE.Group(),ritRL=new THREE.Group();
-ritLL.position.set(-.28,.96,0);ritRL.position.set(.28,.96,0);ritty.add(ritLL,ritRL);ritA.legs.push(ritLL,ritRL);
-roundedLimb(ritLL,catGrey,0,-.40,0,.85,1.1,.85);roundedLimb(ritRL,catGrey,0,-.40,0,.85,1.1,.85);
-mesh(ritLL,new THREE.SphereGeometry(.22,12,10),catGrey,-.04,-.82,-.05).scale.set(1.35,.55,1);
-mesh(ritRL,new THREE.SphereGeometry(.22,12,10),catGrey,.04,-.82,-.05).scale.set(1.35,.55,1);
+ritLL.position.set(-.27,.98,0);ritRL.position.set(.27,.98,0);ritty.add(ritLL,ritRL);ritA.legs.push(ritLL,ritRL);
+roundedLimb(ritLL,catGrey,0,-.38,0,.8,1.0,.82);roundedLimb(ritRL,catGrey,0,-.38,0,.8,1.0,.82);
 
-/* long tail that curls up to the right */
-const ritTailPivot=new THREE.Group();ritTailPivot.position.set(.42,1.25,0);ritty.add(ritTailPivot);ritA.extras.push(ritTailPivot);
-const ritTail1=mesh(ritTailPivot,new THREE.CapsuleGeometry(.13,.72,5,10),catGrey,.38,.05,0);ritTail1.rotation.z=-1.05;
-const ritTail2=mesh(ritTailPivot,new THREE.CapsuleGeometry(.13,.58,5,10),catGrey,.82,.30,0);ritTail2.rotation.z=-.35;
-addRittyTailBand(ritTailPivot,1.04,.50,-.01,-.35);
+const ritTail=new THREE.Group();ritTail.position.set(.45,1.35,0);ritty.add(ritTail);ritA.extras.push(ritTail);
+const rt1=mesh(ritTail,new THREE.CapsuleGeometry(.12,.70,5,10),catGrey,.35,.05,0);rt1.rotation.z=-1.0;
+const rt2=mesh(ritTail,new THREE.CapsuleGeometry(.12,.55,5,10),catGrey,.77,.28,0);rt2.rotation.z=-.30;
+addTailBand(ritTail,.96,.47,0);
 
-
-/* Riark #019 — long arched angry evolution with four red spots */
+/* Riark #019 — long arched body, angry face, four red spots */
 const riark=new THREE.Group();riark.position.set(0,0,2.4);riark.visible=false;scene.add(riark);
 const riaA=makeRunnerParts(riark);
 
-/* arch body using overlapping segments to match the Robodex silhouette */
-const riaBodyPivot=new THREE.Group();riark.add(riaBodyPivot);riaA.extras.push(riaBodyPivot);
-const archPts=[
-  [-.60,1.65],[-.28,2.05],[.10,2.34],[.50,2.45],[.92,2.34],[1.28,2.05],[1.50,1.65]
+const riarkBody=new THREE.Group();riark.add(riarkBody);riaA.extras.push(riarkBody);
+const arch=[
+  [-.55,1.65],[-.20,2.02],[.20,2.28],[.62,2.35],[1.02,2.20],[1.32,1.85]
 ];
-for(let i=0;i<archPts.length;i++){
-  const [x,y]=archPts[i];
-  const seg=mesh(riaBodyPivot,new THREE.SphereGeometry(.48,16,12),catGrey,x,y,0);
-  seg.scale.set(1.05,.88,.76);
+for(const [x,y] of arch){
+  const seg=mesh(riarkBody,new THREE.SphereGeometry(.46,14,10),catGrey,x,y,0);
+  seg.scale.set(1.05,.88,.74);
 }
-/* four red spots on the curved back */
-for(const [x,y] of [[-.38,2.23],[.20,2.52],[.75,2.43],[1.24,2.08]]){
-  mesh(riark,new THREE.SphereGeometry(.14,12,10),catRed,x,y,-.43);
+mesh(riark,new THREE.BoxGeometry(.90,.88,.68),catGrey,-.95,1.85,0);
+addSimpleCatEars(riark,-.95,2.39,0,.82);
+addSimpleCatFace(riark,-.95,1.91,-.36,false,true);
+for(const [x,y] of [[-.18,2.15],[.28,2.39],[.76,2.32],[1.14,2.05]]){
+  mesh(riark,new THREE.SphereGeometry(.13,10,8),catRed,x,y,-.40);
 }
-
-/* angry head at the left end */
-const riaHead=mesh(riark,new THREE.BoxGeometry(.92,.92,.70),catGrey,-1.05,1.88,0);
-addCatEars(riark,-1.05,2.47,0,.85);
-mesh(riark,new THREE.BoxGeometry(.24,.065,.06),catBlack,-1.24,1.98,-.37).rotation.z=-.55;
-mesh(riark,new THREE.BoxGeometry(.24,.065,.06),catBlack,-.86,1.98,-.37).rotation.z=.55;
-mesh(riark,new THREE.SphereGeometry(.085,10,8),catPink,-1.05,1.76,-.39);
-/* open angry mouth with white teeth */
-const riaMouth=mesh(riark,new THREE.BoxGeometry(.43,.24,.06),catBlack,-1.05,1.55,-.39);
-for(const x of [-1.18,-1.05,-.92]){
-  const tooth=mesh(riark,new THREE.ConeGeometry(.045,.11,3),catWhite,x,1.59,-.43);tooth.rotation.z=Math.PI;
+const riaLegs=[];
+for(const [x,y] of [[-.42,1.45],[.05,1.38],[.75,1.35],[1.18,1.48]]){
+  const g=new THREE.Group();g.position.set(x,y,0);riark.add(g);riaLegs.push(g);
+  roundedLimb(g,catGrey,0,-.33,0,.72,.95,.8);
 }
+riaA.legs.push(...riaLegs);
 
-/* four dangling legs under arch */
-const riaLegPivots=[];
-for(const [x,y] of [[-.48,1.58],[.05,1.42],[.87,1.42],[1.30,1.55]]){
-  const g=new THREE.Group();g.position.set(x,y,0);riark.add(g);riaLegPivots.push(g);
-  roundedLimb(g,catGrey,0,-.36,0,.78,1.0,.82);
-  mesh(g,new THREE.SphereGeometry(.18,10,8),catGrey,0,-.72,-.04).scale.set(1.25,.55,1);
-}
-riaA.legs.push(...riaLegPivots);
+const riaTail=new THREE.Group();riaTail.position.set(1.30,1.80,0);riark.add(riaTail);riaA.extras.push(riaTail);
+const ra1=mesh(riaTail,new THREE.CapsuleGeometry(.13,.72,5,10),catGrey,.25,.35,0);ra1.rotation.z=-.38;
+const ra2=mesh(riaTail,new THREE.CapsuleGeometry(.13,.52,5,10),catGrey,.36,.82,0);ra2.rotation.z=.08;
+addTailBand(riaTail,.39,1.12,0);
 
-/* tall curved tail on the right with yellow band/red dot */
-const riaTailPivot=new THREE.Group();riaTailPivot.position.set(1.46,1.75,0);riark.add(riaTailPivot);riaA.extras.push(riaTailPivot);
-const riaTail1=mesh(riaTailPivot,new THREE.CapsuleGeometry(.14,.82,5,10),catGrey,.30,.38,0);riaTail1.rotation.z=-.40;
-const riaTail2=mesh(riaTailPivot,new THREE.CapsuleGeometry(.14,.62,5,10),catGrey,.42,.93,0);riaTail2.rotation.z=.15;
-addRittyTailBand(riaTailPivot,.47,1.24,-.01,.15);
-
-
-/* Right #020 — rounded happy evolution with closed eyes and three red spots */
+/* Right #020 — rounded/happy body, three red spots, short legs */
 const right=new THREE.Group();right.position.set(0,0,2.4);right.visible=false;scene.add(right);
 const rigA=makeRunnerParts(right);
-
-const rigBody=mesh(right,new THREE.SphereGeometry(.92,20,16),catGrey,.35,1.66,0);
-rigBody.scale.set(1.45,.92,.78);
-const rigHead=mesh(right,new THREE.BoxGeometry(.98,.95,.70),catGrey,-.63,2.42,0);
-addCatEars(right,-.63,3.01,0,.9);
-
-/* happy closed eyes */
-const rEyeL=mesh(right,new THREE.TorusGeometry(.12,.035,6,12,Math.PI),catBlack,-.82,2.49,-.38);rEyeL.rotation.z=0;
-const rEyeR=mesh(right,new THREE.TorusGeometry(.12,.035,6,12,Math.PI),catBlack,-.44,2.49,-.38);rEyeR.rotation.z=0;
-const rNose=mesh(right,new THREE.ConeGeometry(.12,.18,3),catPink,-.63,2.28,-.40);rNose.rotation.z=Math.PI;
-const rSmileL=mesh(right,new THREE.TorusGeometry(.12,.03,6,12,Math.PI),catBlack,-.73,2.18,-.40);rSmileL.rotation.z=Math.PI;
-const rSmileR=mesh(right,new THREE.TorusGeometry(.12,.03,6,12,Math.PI),catBlack,-.53,2.18,-.40);rSmileR.rotation.z=Math.PI;
-
-/* three large red oval spots along body */
-for(const [x,y,s] of [[-.02,1.82,.20],[.55,1.65,.18],[1.02,1.55,.17]]){
-  const spot=mesh(right,new THREE.SphereGeometry(s,12,10),catRed,x,y,-.72);
-  spot.scale.set(.85,1.22,.42);
+const rigBody=mesh(right,new THREE.SphereGeometry(.88,18,14),catGrey,.30,1.64,0);
+rigBody.scale.set(1.45,.90,.76);
+mesh(right,new THREE.BoxGeometry(.92,.88,.68),catGrey,-.62,2.34,0);
+addSimpleCatEars(right,-.62,2.88,0,.85);
+addSimpleCatFace(right,-.62,2.39,-.36,true,false);
+for(const [x,y] of [[-.02,1.82],[.50,1.66],[.92,1.54]]){
+  const spot=mesh(right,new THREE.SphereGeometry(.16,10,8),catRed,x,y,-.64);
+  spot.scale.set(.90,1.15,.45);
 }
-
-/* four short legs like the drawing */
-const rigLegPivots=[];
-for(const [x,y] of [[-.48,1.10],[.05,1.02],[.72,1.00],[1.15,1.06]]){
-  const g=new THREE.Group();g.position.set(x,y,0);right.add(g);rigLegPivots.push(g);
-  roundedLimb(g,catGrey,0,-.30,0,.75,.92,.8);
-  mesh(g,new THREE.SphereGeometry(.17,10,8),catGrey,0,-.61,-.04).scale.set(1.25,.52,1);
+const rigLegs=[];
+for(const [x,y] of [[-.42,1.10],[.05,1.02],[.65,1.00],[1.02,1.07]]){
+  const g=new THREE.Group();g.position.set(x,y,0);right.add(g);rigLegs.push(g);
+  roundedLimb(g,catGrey,0,-.28,0,.70,.86,.78);
 }
-rigA.legs.push(...rigLegPivots);
-
-/* upright tail at far right */
-const rigTailPivot=new THREE.Group();rigTailPivot.position.set(1.20,1.65,0);right.add(rigTailPivot);rigA.extras.push(rigTailPivot);
-const rigTail=mesh(rigTailPivot,new THREE.CapsuleGeometry(.14,.86,5,10),catGrey,.22,.48,0);rigTail.rotation.z=.08;
-addRittyTailBand(rigTailPivot,.27,.95,-.01,.08);
+rigA.legs.push(...rigLegs);
+const rigTail=new THREE.Group();rigTail.position.set(1.08,1.58,0);right.add(rigTail);rigA.extras.push(rigTail);
+const rr=mesh(rigTail,new THREE.CapsuleGeometry(.13,.72,5,10),catGrey,.18,.40,0);rr.rotation.z=.04;
+addTailBand(rigTail,.20,.82,0);
 
 /* ---------- Supabase account front end ---------- */
 let currentUser=null;
@@ -1260,7 +1228,7 @@ document.getElementById('billyBtn').onclick=()=>{if(!running)selectCharacter('Bi
 document.getElementById('bobBtn').onclick=()=>{if(!running)selectCharacter('Bob');};
 document.getElementById('lilyBtn').onclick=()=>{if(!running)selectCharacter('Lily');};
 document.getElementById('tmsBtn').onclick=()=>{if(!running)selectCharacter('TMS');};
-document.getElementById('ereeBtn').onclick=()=>{if(!running)selectCharacter('Eree');};
+document.getElementById('ereeBtn').onclick=()=>{if(!running)selectCharacter('Eree');};};
 document.getElementById('borillaBtn').onclick=()=>{if(!running)selectCharacter('Borilla');};
 document.getElementById('saplingBtn').onclick=()=>{if(!running)selectCharacter('Sapling');};
 document.getElementById('watchereeBtn').onclick=()=>{if(!running)selectCharacter('Watcheree');};
@@ -1964,24 +1932,23 @@ function animate(){
       currentRunner().position.y+=Math.abs(Math.sin(phase))*.014;
     }
     if(activeName==='Ritty'){
-      ritLA.rotation.x=Math.sin(phase)*.62; ritRA.rotation.x=-Math.sin(phase)*.62;
-      ritLL.rotation.x=-Math.sin(phase)*.72; ritRL.rotation.x=Math.sin(phase)*.72;
-      ritTailPivot.rotation.z=Math.sin(phase*.8)*.08;
-      ritty.position.y+=Math.abs(Math.sin(phase))*0.015;
+      ritLA.rotation.x=Math.sin(phase)*.62;ritRA.rotation.x=-Math.sin(phase)*.62;
+      ritLL.rotation.x=-Math.sin(phase)*.72;ritRL.rotation.x=Math.sin(phase)*.72;
+      ritTail.rotation.z=Math.sin(phase*.8)*.07;
+      ritty.position.y+=Math.abs(Math.sin(phase))*.014;
     }
     if(activeName==='Riark'){
-      riaLegPivots.forEach((g,i)=>g.rotation.x=(i%2?1:-1)*Math.sin(phase)*.50);
-      riaBodyPivot.rotation.z=Math.sin(phase*2)*.012;
-      riaTailPivot.rotation.z=Math.sin(phase*.8)*.06;
-      riark.position.y+=Math.abs(Math.sin(phase))*0.012;
+      riaLegs.forEach((g,i)=>g.rotation.x=(i%2?1:-1)*Math.sin(phase)*.48);
+      riarkBody.rotation.z=Math.sin(phase*2)*.012;
+      riaTail.rotation.z=Math.sin(phase*.8)*.05;
+      riark.position.y+=Math.abs(Math.sin(phase))*.010;
     }
     if(activeName==='Right'){
-      rigLegPivots.forEach((g,i)=>g.rotation.x=(i%2?1:-1)*Math.sin(phase)*.48);
-      rigTailPivot.rotation.z=Math.sin(phase*.75)*.06;
+      rigLegs.forEach((g,i)=>g.rotation.x=(i%2?1:-1)*Math.sin(phase)*.46);
       rigBody.rotation.z=Math.sin(phase*2)*.012;
-      right.position.y+=Math.abs(Math.sin(phase))*0.012;
+      rigTail.rotation.z=Math.sin(phase*.8)*.05;
+      right.position.y+=Math.abs(Math.sin(phase))*.010;
     }
-
     if(activeName==='Sapling'){
       sapling.rotation.z=Math.sin(phase*2)*.025;
       leaf1.rotation.z=.25+Math.sin(phase)*.10;
